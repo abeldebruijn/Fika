@@ -36,6 +36,7 @@ export default function Overview() {
       <h1>En liten stund<br /><em>svenska.</em></h1>
       <p>Elke dag een paar woorden. Steeds meer zinnen die je in Zweden echt kunt gebruiken.</p>
       <a className="start-lesson" href={`/les?sectie=${current + 1}`}>Verder oefenen <span aria-hidden="true">→</span></a>
+      <a className="create-sentence" href="/lokaal-model">Maak een reiszin met AI ↗</a>
       <span className="overview-index">200 ZINNEN · 10 SECTIES</span>
     </section>
     <section className="overview-stats" aria-label="Jouw voortgang">

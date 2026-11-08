@@ -65,20 +65,28 @@ function makeTiles(sentence, kind, progress) {
 }
 
 function makeCard(progress, section, previous) {
+  if (progress.generatedPending) {
+    const { id, swedish, dutch } = progress.generatedPending
+    return { id, kind: 'toSwedish', swedish, dutch: [dutch], tiles: makeTiles(swedish, 'toSwedish', progress), generated: true }
+  }
   const slot = progress.step % exerciseCycle.length
   const kind = exerciseCycle[slot]
   if (kind === 'word') return wordCard(nextWord(progress, section, previous), progress.step)
 
   const lessonIds = sentenceOrder.slice(section * 20, section * 20 + 20)
   const sentenceProgress = progress.sentences ?? {}
-  const due = lessonIds.filter(id => sentenceProgress[id]?.due <= progress.step)
+  const generated = Object.keys(progress.generatedSentences ?? {})
+    .filter(id => progress.generatedSentences[id].section === section)
+  const due = [...lessonIds, ...generated].filter(id => sentenceProgress[id]?.due <= progress.step)
     .sort((a, b) => sentenceProgress[a].due - sentenceProgress[b].due)
   const shouldReview = due.length > 0 && progress.step % 3 === 0
   const position = progress.lessonPositions?.[section] ?? 0
   const id = shouldReview ? due[0] : lessonIds[position % lessonIds.length]
-  const [swedish, dutch] = sentences[id]
+  const [swedish, dutch] = typeof id === 'string'
+    ? [progress.generatedSentences[id].swedish, [progress.generatedSentences[id].dutch]]
+    : sentences[id]
   const tiles = kind === 'speech' ? [] : makeTiles(kind === 'toSwedish' ? swedish : dutch[0], kind, progress)
-  return { id, kind, swedish, dutch, tiles, review: shouldReview }
+  return { id, kind, swedish, dutch, tiles, review: shouldReview, generated: typeof id === 'string' }
 }
 
 function recordCard(progress, card, correct) {
@@ -98,6 +106,11 @@ function recordCard(progress, card, correct) {
   return {
     ...progress,
     step,
+    generatedPending: progress.generatedPending?.id === card.id ? null : progress.generatedPending,
+    generatedSentences: card.generated ? {
+      ...progress.generatedSentences,
+      [card.id]: { section: progress.section ?? 0, swedish: card.swedish, dutch: card.dutch[0] },
+    } : progress.generatedSentences,
     lessonPositions: {
       ...progress.lessonPositions,
       [progress.section ?? 0]: (progress.lessonPositions?.[progress.section ?? 0] ?? 0) + (card.review ? 0 : 1),

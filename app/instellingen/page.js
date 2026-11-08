@@ -22,7 +22,7 @@ export default function Settings() {
   return <main className="settings-page">
     <a href="/" className="back">← Terug naar oefenen</a>
     <h1>Instellingen</h1>
-    <p><a href="/lokaal-model">Test het lokale taalmodel op je iPhone →</a></p>
+    <p><a href="/lokaal-model">Maak een reiszin met jouw woorden →</a></p>
     <section className="settings-panel">
       <h2>Opnieuw beginnen</h2>
       <p>Wis je opgeslagen voortgang op dit apparaat. Je begint weer bij de eerste woorden en zinnen. Je dagdoel wordt teruggezet naar 5.</p>

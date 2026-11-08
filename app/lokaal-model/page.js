@@ -1,6 +1,9 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import vocabulary from '../words.json'
+import { initialProgress } from '../learning'
+import { loadProgress, saveProgress } from '../storage'
 
 export default function LocalModelTest() {
   const worker = useRef(null)
@@ -12,6 +15,7 @@ export default function LocalModelTest() {
   const [busy, setBusy] = useState(false)
   const [ready, setReady] = useState(false)
   const [errors, setErrors] = useState([])
+  const [gatewaySentence, setGatewaySentence] = useState(null)
 
   function report(error) {
     setErrors(current => [...current, { time: new Date().toLocaleTimeString(), ...error }])
@@ -26,14 +30,58 @@ export default function LocalModelTest() {
       gpu: !!navigator.gpu,
       agent: navigator.userAgent,
     })
+    loadProgress().then(saved => {
+      if (!saved) return
+      const learned = Object.entries(saved.words ?? {}).filter(([, value]) => value.first)
+        .map(([id]) => vocabulary[Number(id)]?.[0]).filter(Boolean).slice(0, 20)
+      if (learned.length >= 3) setWords(learned.join(', '))
+    }).catch(() => {})
     return () => worker.current?.terminate()
   }, [])
+
+  async function generateGateway() {
+    setErrors([])
+    setBusy(true)
+    setOutput('')
+    setGatewaySentence(null)
+    setStatus('Reiszin maken via Vercel AI Gateway…')
+    try {
+      const result = await fetch('/api/zin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ words, maxWords: 6 }),
+      })
+      const data = await result.json()
+      if (!result.ok) throw Object.assign(new Error(data.error ?? 'Geen antwoord van AI Gateway'), {
+        name: data.code ?? `HTTP_${result.status}`, detail: data.detail,
+      })
+      setGatewaySentence(data)
+      setOutput(data.swedish)
+      setStatus(`Zin gegenereerd via ${data.model}`)
+      setBusy(false)
+    } catch (error) {
+      report({ name: error.name, message: error.message, stack: error.detail ? JSON.stringify(error.detail, null, 2) : error.stack })
+    }
+  }
+
+  async function practiceSentence() {
+    if (!gatewaySentence) return
+    try {
+      const progress = (await loadProgress()) ?? initialProgress
+      await saveProgress({ ...progress, generatedPending: {
+        id: `g-${Date.now()}`, swedish: gatewaySentence.swedish, dutch: gatewaySentence.dutch,
+      } })
+      window.location.href = `/les?sectie=${(progress.section ?? 0) + 1}`
+    } catch (error) {
+      report({ name: error.name, message: error.message, stack: error.stack })
+    }
+  }
 
   function start(type) {
     setErrors([])
     setBusy(true)
     setProgress(null)
     setOutput('')
+    setGatewaySentence(null)
     try {
       if (!worker.current) {
         const instance = new Worker(new URL('../llm-worker.js', import.meta.url), { type: 'module' })
@@ -57,20 +105,27 @@ export default function LocalModelTest() {
 
   return <main className="model-test">
     <a href="/instellingen">← Instellingen</a>
-    <p className="eyebrow">EXPERIMENT · OP JE APPARAAT</p>
-    <h1>Test een lokaal taalmodel</h1>
-    <p>Deze pagina test of Safari op jouw iPhone zelf een Zweedse zin kan maken. Het model wordt bij de eerste start gedownload en kan veel opslag en geheugen gebruiken. Je ingevoerde woorden blijven in de browser.</p>
+    <p className="eyebrow">MAAK EEN NIEUWE REISZIN</p>
+    <h1>Een zin met jouw woorden</h1>
+    <p>Maak een nieuwe Zweedse reiszin met woorden die je al hebt geleerd. Via Vercel AI Gateway worden de gekozen woorden naar een taalmodel gestuurd. Je voortgang blijft lokaal in deze browser.</p>
     <section className="model-panel">
-      <h2>Ondersteuning</h2>
-      <dl><div><dt>Web Workers</dt><dd>{supported ? supported.worker ? 'Beschikbaar' : 'Niet beschikbaar' : 'Controleren…'}</dd></div><div><dt>WebAssembly</dt><dd>{supported ? supported.wasm ? 'Beschikbaar' : 'Niet beschikbaar' : 'Controleren…'}</dd></div><div><dt>WebGPU</dt><dd>{supported ? supported.gpu ? 'Beschikbaar' : 'Niet beschikbaar' : 'Controleren…'}</dd></div><div><dt>Rekenmethode</dt><dd>WebAssembly op je apparaat</dd></div></dl>
-      <label htmlFor="model-words">Woorden voor de proefzin</label>
+      <h2>Vercel AI Gateway</h2>
+      <p>Een klein model maakt een korte zin met Nederlandse vertaling. Je kunt de zin daarna meteen oefenen.</p>
+      <label htmlFor="model-words">Zweedse woorden voor je reiszin</label>
       <textarea id="model-words" value={words} onChange={event => setWords(event.target.value)} rows={3} />
-      <div className="model-buttons"><button onClick={() => start('load')} disabled={busy || ready || !supported?.worker || !supported?.wasm}>Model laden</button><button onClick={() => start('generate')} disabled={busy || !words.trim() || !supported?.worker || !supported?.wasm}>Maak een testzin</button></div>
+      <div className="model-buttons"><button onClick={generateGateway} disabled={busy || !words.trim()}>Maak een reiszin</button></div>
+      {gatewaySentence && <div className="model-output"><small>ZWEEDS · {gatewaySentence.model}</small><p lang="sv">{gatewaySentence.swedish}</p><p>{gatewaySentence.dutch}</p><button className="practice-sentence" onClick={practiceSentence}>Oefen deze zin →</button></div>}
       <p role="status" className="model-status">{status}</p>
-      {progress && <div><progress value={progress.progress || 0} max="100" /> <small>{progress.file || 'Bestand'} · {Math.round(progress.progress || 0)}%</small></div>}
-      {output && <div className="model-output"><small>GEGENEREERDE ZIN</small><p lang="sv">{output}</p></div>}
-      {errors.length > 0 && <section className="model-errors" role="alert"><h2>Fouten op dit apparaat</h2><p>Je kunt deze details kopiëren wanneer we de fout samen willen oplossen.</p>{errors.map((error, index) => <div key={index}><strong>{error.time} · {error.name}</strong><pre>{error.message}{error.stack ? `\n\n${error.stack}` : ''}</pre></div>)}<button onClick={() => navigator.clipboard.writeText(JSON.stringify({ errors, browser: supported?.agent }, null, 2)).catch(error => report({ name: error.name, message: error.message }))}>Kopieer foutdetails</button></section>}
+      {errors.length > 0 && <section className="model-errors" role="alert"><h2>Foutdetails</h2>{errors.map((error, index) => <div key={index}><strong>{error.time} · {error.name}</strong><pre>{error.message}{error.stack ? `\n\n${error.stack}` : ''}</pre></div>)}<button onClick={() => navigator.clipboard.writeText(JSON.stringify({ errors, browser: supported?.agent }, null, 2)).catch(error => report({ name: error.name, message: error.message }))}>Kopieer foutdetails</button></section>}
     </section>
-    <p className="model-note">Dit is een losse test. Gegenereerde zinnen worden niet aan je lessen toegevoegd.</p>
+    <section className="model-panel">
+      <h2>Experimenteel lokaal model</h2>
+      <p>Deze proef draait alleen op je iPhone. Het kleine model kan onzinnige zinnen maken en moet eerst bestanden downloaden.</p>
+      <dl><div><dt>Web Workers</dt><dd>{supported ? supported.worker ? 'Beschikbaar' : 'Niet beschikbaar' : 'Controleren…'}</dd></div><div><dt>WebAssembly</dt><dd>{supported ? supported.wasm ? 'Beschikbaar' : 'Niet beschikbaar' : 'Controleren…'}</dd></div><div><dt>WebGPU</dt><dd>{supported ? supported.gpu ? 'Beschikbaar' : 'Niet beschikbaar' : 'Controleren…'}</dd></div><div><dt>Rekenmethode</dt><dd>WebAssembly op je apparaat</dd></div></dl>
+      <div className="model-buttons"><button onClick={() => start('load')} disabled={busy || ready || !supported?.worker || !supported?.wasm}>Model laden</button><button onClick={() => start('generate')} disabled={busy || !words.trim() || !supported?.worker || !supported?.wasm}>Maak een testzin</button></div>
+      {progress && <div><progress value={progress.progress || 0} max="100" /> <small>{progress.file || 'Bestand'} · {Math.round(progress.progress || 0)}%</small></div>}
+      {output && !gatewaySentence && <div className="model-output"><small>LOKALE TESTZIN</small><p lang="sv">{output}</p></div>}
+    </section>
+    <p className="model-note">Een gegenereerde zin komt na een fout antwoord later terug in je les.</p>
   </main>
 }
