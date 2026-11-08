@@ -35,7 +35,7 @@ export default function Overview() {
       <p className="eyebrow">JOUW ZWEEDSE REIS BEGINT HIER</p>
       <h1>En liten stund<br /><em>svenska.</em></h1>
       <p>Elke dag een paar woorden. Steeds meer zinnen die je in Zweden echt kunt gebruiken.</p>
-      <a className="start-lesson" href={`/les?sectie=${current + 1}`}>Verder oefenen <span aria-hidden="true">↗</span></a>
+      <a className="start-lesson" href={`/les?sectie=${current + 1}`}>Verder oefenen <span aria-hidden="true">→</span></a>
       <span className="overview-index">200 ZINNEN · 10 SECTIES</span>
     </section>
     <section className="overview-stats" aria-label="Jouw voortgang">
@@ -52,7 +52,7 @@ export default function Overview() {
         return <a key={index} href={`/les?sectie=${index + 1}`} className="lesson-row">
           <span className="lesson-row-number">{String(index + 1).padStart(2,'0')}</span>
           <span className="lesson-row-title">{['Aankomen','Onderweg','In het café','Eten bestellen','In het hotel','De stad in','Winkelen','Een praatje','Praktische vragen','Zelfstandig op reis'][index]}<small>Woorden {start + 1}–{start + 20}</small></span>
-          <span className="lesson-row-count">{count} / 20</span><span className="lesson-row-arrow" aria-hidden="true">↗</span>
+          <span className="lesson-row-count">{count} / 20</span><span className="lesson-row-arrow" aria-hidden="true">→</span>
         </a>
       })}</div>
     </section>
