@@ -29,3 +29,7 @@ export function loadProgress() {
 export function saveProgress(progress) {
   return useDatabase('readwrite', store => store.put(progress, 'current'))
 }
+
+export function clearProgress() {
+  return useDatabase('readwrite', store => store.clear())
+}

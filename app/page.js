@@ -11,6 +11,12 @@ function normalize(text) {
   return text.normalize('NFC').toLowerCase().trim().replace(/[.!?,;:]/g, '').replace(/\s+/g, ' ')
 }
 
+function canShowMeaning(progress, word, language) {
+  const key = `${language}:${word.toLocaleLowerCase(language).replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '')}`
+  const history = progress.promptWords?.[key]
+  return (history?.seen ?? 0) <= 5 || !!history?.wrong
+}
+
 function wordCard(id, step) {
   const [swedish, dutch] = words[id]
   const distractors = []
@@ -63,20 +69,45 @@ function makeCard(progress, section, previous) {
   const kind = exerciseCycle[slot]
   if (kind === 'word') return wordCard(nextWord(progress, section, previous), progress.step)
 
-  const cycle = Math.floor(progress.step / exerciseCycle.length)
-  const translations = exerciseCycle.slice(0, slot)
-    .filter(type => type === 'toSwedish' || type === 'toDutch').length
-  // Change the sentence paired with each direction on subsequent passes.
-  const translationNumber = cycle * 8 + translations
-  const index = kind === 'speech' ? cycle : translationNumber + Math.floor(translationNumber / sentences.length)
-  const [swedish, dutch] = sentences[index % sentences.length]
+  const sentenceProgress = progress.sentences ?? {}
+  const due = Object.entries(sentenceProgress)
+    .filter(([_, item]) => item.due <= progress.step)
+    .sort((a, b) => a[1].due - b[1].due)
+  const shouldReview = due.length > 0 && progress.step % 3 === 0
+  const id = shouldReview ? Number(due[0][0]) : (progress.nextSentence ?? 0) % sentences.length
+  const [swedish, dutch] = sentences[id]
   const tiles = kind === 'speech' ? [] : makeTiles(kind === 'toSwedish' ? swedish : dutch[0], kind, progress)
-  return { kind, swedish, dutch, tiles }
+  return { id, kind, swedish, dutch, tiles, review: shouldReview }
 }
 
 function recordCard(progress, card, correct) {
   if (card.kind === 'word') return record(progress, card.id, correct)
-  return { ...progress, step: progress.step + 1 }
+  const step = progress.step + 1
+  const previous = progress.sentences?.[card.id] ?? { seen: 0, streak: 0 }
+  const streak = correct ? previous.streak + 1 : 0
+  const prompt = card.kind === 'toSwedish' ? card.dutch[0] : card.swedish
+  const language = card.kind === 'toSwedish' ? 'nl' : 'sv'
+  const promptWords = { ...progress.promptWords }
+  if (card.kind !== 'speech') {
+    for (const word of prompt.toLocaleLowerCase(language).match(/\p{L}+/gu) ?? []) {
+      const key = `${language}:${word}`
+      promptWords[key] = { seen: (promptWords[key]?.seen ?? 0) + 1, wrong: !correct }
+    }
+  }
+  return {
+    ...progress,
+    step,
+    nextSentence: card.review ? progress.nextSentence : (progress.nextSentence ?? 0) + 1,
+    promptWords,
+    sentences: {
+      ...progress.sentences,
+      [card.id]: {
+        seen: previous.seen + 1,
+        streak,
+        due: step + (correct ? [0, 8, 24, 72, 144, 288][Math.min(streak, 5)] : 3),
+      },
+    },
+  }
 }
 
 export default function Home() {
@@ -190,7 +221,7 @@ export default function Home() {
     setFeedback({ correct })
   }
 
-  function show(next, requestedSection = Math.floor(next.id / SECTION_SIZE)) {
+  function show(next, requestedSection = section) {
     attempt.current++
     if (recorder.current?.state === 'recording') recorder.current.stop()
     setRecording(false)
@@ -209,7 +240,7 @@ export default function Home() {
     const updated = feedback ? progress : recordCard(progress, card, false)
     if (!feedback) update(updated)
     const next = makeCard(updated, section, card.kind === 'word' ? card.id : undefined)
-    show(next, next.kind === 'word' ? undefined : section)
+    show(next, section)
   }
 
   function chooseSection(index) {
@@ -229,16 +260,18 @@ export default function Home() {
   const speech = card.kind === 'speech'
   const toSwedish = card.kind === 'toSwedish'
   const prompt = toSwedish ? card.dutch[0] : card.swedish
+  const promptLanguage = toSwedish ? 'nl' : 'sv'
+  const promptParts = prompt.split(/(\s+)/)
 
   return <main className="shell">
     <header className="header">
       <a className="brand" href="./"><span className="flag" aria-hidden="true" /> fika<span>.</span></a>
-      <span className="header-note">ZWEEDS IN KLEINE STAPPEN</span>
+      <a className="header-note" href="/instellingen">Instellingen</a>
     </header>
 
     <section className="hero">
       <div><p className="eyebrow">HEJ! · JOUW TAALTRAINER</p><h1>Een beetje Zweeds,<br />elke dag.</h1>
-      <p>Oefen Zweedse reiszinnen en 200 veelgebruikte woorden.</p></div>
+      <p>Oefen 200 Zweedse reiszinnen en 200 veelgebruikte woorden.</p></div>
       <div className="goal">
         <label htmlFor="goal">Nieuwe woorden per dag</label>
         <div className="goal-line"><strong>{daily}</strong><span> / </span><select id="goal" value={progress.goal} disabled={!ready} onChange={event => update({ ...progress, goal: Number(event.target.value) })}>
@@ -259,8 +292,9 @@ export default function Home() {
           <div className={vocabulary || speech ? "prompt" : "prompt sentence-prompt"}>
             {vocabulary || speech ? <strong lang="sv">{prompt}</strong> :
               <div className="prompt-words" lang={toSwedish ? 'nl' : 'sv'}>
-                {prompt.split(/(\s+)/).map((part, index) => /^\s+$/.test(part) ? part :
+                {promptParts.map((part, index) => /^\s+$/.test(part) ? part :
                   <button type="button" key={index} className="prompt-word"
+                    disabled={!canShowMeaning(progress, part, promptLanguage)}
                     aria-label={`Vertaling van ${part}`}
                     aria-expanded={selectedPromptWord === index}
                     onClick={() => setSelectedPromptWord(selectedPromptWord === index ? null : index)}>
@@ -271,8 +305,8 @@ export default function Home() {
           </div>
           {!vocabulary && !speech && selectedPromptWord !== null &&
             <p className="word-gloss" role="status">
-              <strong>{prompt.split(/(\s+)/)[selectedPromptWord]}</strong>
-              <span> → {wordMeaning(prompt.split(/(\s+)/)[selectedPromptWord], toSwedish ? 'nl' : 'sv')}</span>
+              <strong>{promptParts[selectedPromptWord]}</strong>
+              <span> → {wordMeaning(promptParts[selectedPromptWord], toSwedish ? 'nl' : 'sv')}</span>
             </p>}
           {speech && <p className="hint">{card.dutch[0]} Luister en vergelijk je uitspraak met het voorbeeld.</p>}
           {audioMessage && <p role="status" className="hint">{audioMessage}</p>}

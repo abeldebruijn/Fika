@@ -46,6 +46,29 @@ const dutch = {
   zeggen:'säga', zitten:'sitta',
 }
 
+Object.assign(swedish, {
+  centralstationen:'het centraal station', cappuccino:'cappuccino', mineralvatten:'mineraalwater', chokladboll:'chocoladebol', apoteket:'de apotheek', beställer:'bestel', biblioteket:'de bibliotheek',
+  busshållplatsen:'de bushalte', butiken:'de winkel', cykel:'fiets', dela:'delen',
+  efter:'naar / achter', från:'van / vanaf', färjan:'de veerboot', gå:'lopen / gaan',
+  hotellet:'het hotel', hyra:'huren', idag:'vandaag', juice:'sapje', kommer:'komt',
+  kvitto:'bonnetje', ledig:'vrij', letar:'zoeken', min:'mijn', mjölk:'melk',
+  perrong:'perron', plats:'plek', på:'op / bij', restaurangen:'het restaurant',
+  ringa:'bellen', sallad:'salade', smörgås:'broodje', soppa:'soep', stänger:'sluit',
+  ta:'nemen', tar:'neem', taxi:'taxi', te:'thee', telefon:'telefoon', tåget:'de trein',
+  utan:'zonder', utgången:'de uitgang', visa:'wijzen', vägen:'de weg', öppet:'open',
+})
+Object.assign(dutch, {
+  centraal:'central', cappuccino:'cappuccino', mineraalwater:'mineralvatten', chocoladebol:'chokladboll', bellen:'ringa', bestel:'beställer', bibliotheek:'biblioteket', bij:'på / till',
+  bonnetje:'kvitto', broodje:'smörgås', bushalte:'busshållplatsen', delen:'dela',
+  fiets:'cykel', hotel:'hotellet', huren:'hyra', kom:'kommer', komt:'kommer',
+  lopen:'gå', meenemen:'ta med', melk:'mjölk', mij:'mig', neem:'tar',
+  perron:'perrong', plek:'plats', restaurant:'restaurangen', salade:'sallad',
+  sapje:'juice', sluit:'stänger', soep:'soppa', taxi:'taxi', telefoon:'telefon',
+  thee:'te', uitgang:'utgången', vandaag:'idag', veerboot:'färjan', vrije:'ledig',
+  weg:'vägen', welk:'vilken', wijzen:'visa', winkel:'butiken', zoek:'letar',
+  zonder:'utan',
+})
+
 export function wordMeaning(word, language) {
   const key = word.toLocaleLowerCase(language).replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '')
   return (language === 'sv' ? swedish : dutch)[key] ?? 'Vertaling niet beschikbaar'

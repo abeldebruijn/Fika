@@ -22,3 +22,7 @@ button,input,select{font:inherit;color:inherit}button,select{cursor:pointer}butt
 .prompt-word{display:inline;background:none;border:0;border-bottom:2px dotted #90b5ba;border-radius:0;padding:0 1px;color:inherit;font:inherit;letter-spacing:inherit;line-height:inherit;text-align:left;cursor:pointer}
 .prompt-word:hover,.prompt-word[aria-expanded=true]{background:#d3e9e8;border-bottom-color:var(--blue)}
 .word-gloss{background:#fff4cc;border:1px solid #e7d68c;border-radius:10px;padding:9px 12px;margin:-6px 0 14px;color:var(--ink);font-size:15px}
+
+.header-note{color:var(--blue);text-decoration:none}
+.prompt-word:disabled{cursor:default;border-bottom-color:transparent}.prompt-word:disabled:hover{background:none}
+.settings-page{width:min(600px,calc(100% - 32px));margin:48px auto}.settings-page h1{font-size:clamp(32px,5vw,48px);letter-spacing:-.04em}.settings-panel{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:24px}.settings-panel p{color:var(--muted)}.settings-page a{color:var(--blue)}.settings-panel button{border:1px solid var(--line);border-radius:10px;background:white;padding:12px 16px;margin-right:10px;margin-bottom:10px;font-weight:700}.settings-panel .danger{background:#a83523;border-color:#a83523;color:white}.confirm-reset{border-top:1px solid var(--line);margin-top:15px}
