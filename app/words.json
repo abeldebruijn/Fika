@@ -1,0 +1,802 @@
+[
+ [
+  "och",
+  "en"
+ ],
+ [
+  "vara",
+  "zijn"
+ ],
+ [
+  "i",
+  "in"
+ ],
+ [
+  "ha",
+  "hebben"
+ ],
+ [
+  "dess",
+  "diens"
+ ],
+ [
+  "det",
+  "het / dat"
+ ],
+ [
+  "en",
+  "een (en-woord)"
+ ],
+ [
+  "som",
+  "die / dat / als"
+ ],
+ [
+  "på",
+  "op"
+ ],
+ [
+  "å",
+  "riviertje"
+ ],
+ [
+  "av",
+  "van / door"
+ ],
+ [
+  "för",
+  "voor"
+ ],
+ [
+  "att",
+  "dat / te"
+ ],
+ [
+  "kunna",
+  "kunnen"
+ ],
+ [
+  "skola",
+  "zullen / moeten"
+ ],
+ [
+  "jag",
+  "ik"
+ ],
+ [
+  "inte",
+  "niet"
+ ],
+ [
+  "med",
+  "met"
+ ],
+ [
+  "till",
+  "naar / tot"
+ ],
+ [
+  "liten",
+  "klein"
+ ],
+ [
+  "den",
+  "die / de"
+ ],
+ [
+  "ett",
+  "een (ett-woord)"
+ ],
+ [
+  "unna",
+  "gunnen"
+ ],
+ [
+  "om",
+  "over / als"
+ ],
+ [
+  "vi",
+  "wij"
+ ],
+ [
+  "men",
+  "maar"
+ ],
+ [
+  "man",
+  "men"
+ ],
+ [
+  "de",
+  "zij (meervoud)"
+ ],
+ [
+  "få",
+  "krijgen / mogen"
+ ],
+ [
+  "så",
+  "zo / dus"
+ ],
+ [
+  "sig",
+  "zich"
+ ],
+ [
+  "han",
+  "hij"
+ ],
+ [
+  "bli",
+  "worden"
+ ],
+ [
+  "komma",
+  "komen"
+ ],
+ [
+  "sin",
+  "zijn / haar (eigen)"
+ ],
+ [
+  "eller",
+  "of"
+ ],
+ [
+  "från",
+  "van / vanaf"
+ ],
+ [
+  "mycket",
+  "veel"
+ ],
+ [
+  "vilja",
+  "willen"
+ ],
+ [
+  "all",
+  "al / alle"
+ ],
+ [
+  "göra",
+  "doen / maken"
+ ],
+ [
+  "annan",
+  "ander"
+ ],
+ [
+  "du",
+  "jij"
+ ],
+ [
+  "någon",
+  "iemand / een of andere"
+ ],
+ [
+  "finna",
+  "vinden"
+ ],
+ [
+  "ta",
+  "nemen"
+ ],
+ [
+  "när",
+  "wanneer / toen"
+ ],
+ [
+  "se",
+  "zien"
+ ],
+ [
+  "måste",
+  "moeten"
+ ],
+ [
+  "detta",
+  "dit"
+ ],
+ [
+  "stor",
+  "groot"
+ ],
+ [
+  "nu",
+  "nu"
+ ],
+ [
+  "gå",
+  "gaan / lopen"
+ ],
+ [
+  "säga",
+  "zeggen"
+ ],
+ [
+  "vad",
+  "wat"
+ ],
+ [
+  "år",
+  "jaar"
+ ],
+ [
+  "äga",
+  "bezitten"
+ ],
+ [
+  "under",
+  "onder / tijdens"
+ ],
+ [
+  "betyda",
+  "betekenen"
+ ],
+ [
+  "också",
+  "ook"
+ ],
+ [
+  "där",
+  "daar"
+ ],
+ [
+  "då",
+  "toen / dan"
+ ],
+ [
+  "min",
+  "mijn"
+ ],
+ [
+  "böra",
+  "behoren te / zou moeten"
+ ],
+ [
+  "hur",
+  "hoe"
+ ],
+ [
+  "mig",
+  "mij"
+ ],
+ [
+  "mot",
+  "tegen / richting"
+ ],
+ [
+  "bara",
+  "alleen / slechts"
+ ],
+ [
+  "vilken",
+  "welke (en-woord)"
+ ],
+ [
+  "ut",
+  "uit / naar buiten"
+ ],
+ [
+  "ny",
+  "nieuw"
+ ],
+ [
+  "vid",
+  "bij / naast"
+ ],
+ [
+  "än",
+  "dan (vergelijking)"
+ ],
+ [
+  "bra",
+  "goed"
+ ],
+ [
+  "ingen",
+  "niemand / geen"
+ ],
+ [
+  "dem",
+  "hen"
+ ],
+ [
+  "efter",
+  "na"
+ ],
+ [
+  "upp",
+  "omhoog"
+ ],
+ [
+  "hon",
+  "zij (enkelvoud)"
+ ],
+ [
+  "lite",
+  "een beetje"
+ ],
+ [
+  "denna",
+  "deze (en-woord)"
+ ],
+ [
+  "in",
+  "naar binnen"
+ ],
+ [
+  "över",
+  "over / boven"
+ ],
+ [
+  "ge",
+  "geven"
+ ],
+ [
+  "vår",
+  "ons / onze"
+ ],
+ [
+  "del",
+  "deel"
+ ],
+ [
+  "här",
+  "hier"
+ ],
+ [
+  "även",
+  "ook / eveneens"
+ ],
+ [
+  "skriva",
+  "schrijven"
+ ],
+ [
+  "tid",
+  "tijd"
+ ],
+ [
+  "ju",
+  "immers / toch"
+ ],
+ [
+  "sedan",
+  "daarna / sinds"
+ ],
+ [
+  "te sig",
+  "zich gedragen / lijken"
+ ],
+ [
+  "riva",
+  "scheuren / slopen"
+ ],
+ [
+  "börja",
+  "beginnen"
+ ],
+ [
+  "hel",
+  "heel / volledig"
+ ],
+ [
+  "dag",
+  "dag"
+ ],
+ [
+  "själv",
+  "zelf"
+ ],
+ [
+  "människa",
+  "mens"
+ ],
+ [
+  "land",
+  "land"
+ ],
+ [
+  "svensk",
+  "Zweeds"
+ ],
+ [
+  "fråga",
+  "vraag"
+ ],
+ [
+  "oss",
+  "ons"
+ ],
+ [
+  "tro",
+  "geloven / denken"
+ ],
+ [
+  "el",
+  "elektriciteit"
+ ],
+ [
+  "tycka",
+  "vinden (een mening)"
+ ],
+ [
+  "kommentar",
+  "reactie / commentaar"
+ ],
+ [
+  "veta",
+  "weten"
+ ],
+ [
+  "idag",
+  "vandaag"
+ ],
+ [
+  "försöka",
+  "proberen"
+ ],
+ [
+  "behöva",
+  "nodig hebben"
+ ],
+ [
+  "samma",
+  "dezelfde"
+ ],
+ [
+  "mellan",
+  "tussen"
+ ],
+ [
+  "känna",
+  "voelen / kennen"
+ ],
+ [
+  "läsa",
+  "lezen"
+ ],
+ [
+  "ro",
+  "roeien"
+ ],
+ [
+  "kanske",
+  "misschien"
+ ],
+ [
+  "lik",
+  "gelijkend"
+ ],
+ [
+  "låta",
+  "laten / klinken"
+ ],
+ [
+  "olik",
+  "verschillend"
+ ],
+ [
+  "sådan",
+  "zo'n / dergelijk"
+ ],
+ [
+  "sätt",
+  "manier"
+ ],
+ [
+  "hans",
+  "zijn (van hem)"
+ ],
+ [
+  "din",
+  "jouw"
+ ],
+ [
+  "gång",
+  "keer / gang"
+ ],
+ [
+  "stå",
+  "staan"
+ ],
+ [
+  "inom",
+  "binnen"
+ ],
+ [
+  "visa",
+  "tonen / laten zien"
+ ],
+ [
+  "använda",
+  "gebruiken"
+ ],
+ [
+  "vända",
+  "draaien / keren"
+ ],
+ [
+  "hålla",
+  "houden / vasthouden"
+ ],
+ [
+  "genom",
+  "door / via"
+ ],
+ [
+  "helt",
+  "helemaal"
+ ],
+ [
+  "fler",
+  "meer (telbaar)"
+ ],
+ [
+  "utan",
+  "zonder"
+ ],
+ [
+  "väl",
+  "wel / waarschijnlijk"
+ ],
+ [
+  "barn",
+  "kind"
+ ],
+ [
+  "enligt",
+  "volgens"
+ ],
+ [
+  "tänka",
+  "denken"
+ ],
+ [
+  "ni",
+  "jullie / u"
+ ],
+ [
+  "viktig",
+  "belangrijk"
+ ],
+ [
+  "ring",
+  "ring"
+ ],
+ [
+  "eftersom",
+  "omdat"
+ ],
+ [
+  "liv",
+  "leven"
+ ],
+ [
+  "deras",
+  "hun"
+ ],
+ [
+  "värld",
+  "wereld"
+ ],
+ [
+  "viss",
+  "zeker / bepaald"
+ ],
+ [
+  "dock",
+  "echter"
+ ],
+ [
+  "egen",
+  "eigen"
+ ],
+ [
+  "folk",
+  "volk / mensen"
+ ],
+ [
+  "regering",
+  "regering"
+ ],
+ [
+  "fram",
+  "naar voren / tevoorschijn"
+ ],
+ [
+  "honom",
+  "hem"
+ ],
+ [
+  "söka",
+  "zoeken"
+ ],
+ [
+  "dig",
+  "jou"
+ ],
+ [
+  "sak",
+  "ding / zaak"
+ ],
+ [
+  "hög",
+  "hoog"
+ ],
+ [
+  "länge",
+  "lang (tijdsduur)"
+ ],
+ [
+  "person",
+  "persoon"
+ ],
+ [
+  "ligga",
+  "liggen"
+ ],
+ [
+  "son",
+  "zoon"
+ ],
+ [
+  "både",
+  "beide / zowel"
+ ],
+ [
+  "just",
+  "juist / net"
+ ],
+ [
+  "lägga",
+  "leggen"
+ ],
+ [
+  "antal",
+  "aantal"
+ ],
+ [
+  "redan",
+  "al / reeds"
+ ],
+ [
+  "kvinna",
+  "vrouw"
+ ],
+ [
+  "problem",
+  "probleem"
+ ],
+ [
+  "fall",
+  "geval / val"
+ ],
+ [
+  "aldrig",
+  "nooit"
+ ],
+ [
+  "ofta",
+  "vaak"
+ ],
+ [
+  "varje",
+  "elk / ieder"
+ ],
+ [
+  "artikel",
+  "artikel"
+ ],
+ [
+  "anse",
+  "beschouwen / van mening zijn"
+ ],
+ [
+  "öva",
+  "oefenen"
+ ],
+ [
+  "lag",
+  "wet / team"
+ ],
+ [
+  "slag",
+  "slag / soort"
+ ],
+ [
+  "tal",
+  "getal / toespraak"
+ ],
+ [
+  "åt",
+  "voor / aan"
+ ],
+ [
+  "nog",
+  "waarschijnlijk / genoeg"
+ ],
+ [
+  "bok",
+  "boek"
+ ],
+ [
+  "varför",
+  "waarom"
+ ],
+ [
+  "handla",
+  "handelen / gaan over"
+ ],
+ [
+  "gammal",
+  "oud"
+ ],
+ [
+  "bild",
+  "afbeelding"
+ ],
+ [
+  "sida",
+  "kant / pagina"
+ ],
+ [
+  "öka",
+  "toenemen / verhogen"
+ ],
+ [
+  "därför",
+  "daarom"
+ ],
+ [
+  "sen",
+  "laat"
+ ],
+ [
+  "god",
+  "goed / lekker"
+ ],
+ [
+  "hos",
+  "bij (iemand)"
+ ],
+ [
+  "alltid",
+  "altijd"
+ ],
+ [
+  "skapa",
+  "creëren"
+ ],
+ [
+  "arbete",
+  "werk"
+ ],
+ [
+  "kapa",
+  "afzagen / kapen"
+ ],
+ [
+  "samt",
+  "en tevens"
+ ],
+ [
+  "blogg",
+  "blog"
+ ],
+ [
+  "innan",
+  "voordat"
+ ],
+ [
+  "ur",
+  "uit (van binnenuit)"
+ ],
+ [
+  "gälla",
+  "gelden / van toepassing zijn"
+ ]
+]
