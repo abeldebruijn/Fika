@@ -17,3 +17,8 @@ button,input,select{font:inherit;color:inherit}button,select{cursor:pointer}butt
 .translation .tile-bank button,.translation .tile-answer button{min-height:42px;border-bottom-width:3px;font-weight:650}.translation .tile-answer button{background:#e7f4f6}
 .translation .check{width:100%;text-align:center;background:var(--blue);color:white;border:1px solid var(--blue);border-bottom:3px solid #103d51}.translation .check:hover:enabled{background:#114961;color:white}.translation .check:disabled{opacity:1;background:#e6eeed;color:#4d6570;border-color:#e6eeed}
 @media(max-width:700px){.shell{display:flex;flex-direction:column;gap:12px}.header{order:0;padding-bottom:0}.grid{display:contents}.card{order:1}.hero{order:2}.sections{order:3}footer{order:4}}
+
+.prompt-words{flex:1;min-width:0;font-size:clamp(22px,5vw,30px);font-weight:700;line-height:1.65;letter-spacing:-.025em}
+.prompt-word{display:inline;background:none;border:0;border-bottom:2px dotted #90b5ba;border-radius:0;padding:0 1px;color:inherit;font:inherit;letter-spacing:inherit;line-height:inherit;text-align:left;cursor:pointer}
+.prompt-word:hover,.prompt-word[aria-expanded=true]{background:#d3e9e8;border-bottom-color:var(--blue)}
+.word-gloss{background:#fff4cc;border:1px solid #e7d68c;border-radius:10px;padding:9px 12px;margin:-6px 0 14px;color:var(--ink);font-size:15px}

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import words from './words.json'
 import { sentences } from './sentences'
+import { wordMeaning } from './glossary'
 import { dateKey, dueWords, initialProgress, nextWord, record, SECTION_SIZE } from './learning'
 import { loadProgress, saveProgress } from './storage'
 
@@ -86,6 +87,7 @@ export default function Home() {
   const [answer, setAnswer] = useState('')
   const [selectedTiles, setSelectedTiles] = useState([])
   const [feedback, setFeedback] = useState(null)
+  const [selectedPromptWord, setSelectedPromptWord] = useState(null)
   const [storageError, setStorageError] = useState(false)
   const [audioMessage, setAudioMessage] = useState('')
   const [recording, setRecording] = useState(false)
@@ -197,6 +199,7 @@ export default function Home() {
     setAnswer('')
     setSelectedTiles([])
     setFeedback(null)
+    setSelectedPromptWord(null)
     setSection(requestedSection)
     setCard(next)
     requestAnimationFrame(() => title.current?.focus())
@@ -254,9 +257,23 @@ export default function Home() {
         <h2 ref={title} tabIndex={-1}>{!ready ? 'Voortgang laden…' : vocabulary ? 'Wat betekent dit woord?' : speech ? 'Zeg deze zin hardop' : 'Bouw de vertaling'}</h2>
         {ready && <>
           <div className={vocabulary || speech ? "prompt" : "prompt sentence-prompt"}>
-            <strong lang={toSwedish ? 'nl' : 'sv'}>{prompt}</strong>
+            {vocabulary || speech ? <strong lang="sv">{prompt}</strong> :
+              <div className="prompt-words" lang={toSwedish ? 'nl' : 'sv'}>
+                {prompt.split(/(\s+)/).map((part, index) => /^\s+$/.test(part) ? part :
+                  <button type="button" key={index} className="prompt-word"
+                    aria-label={`Vertaling van ${part}`}
+                    aria-expanded={selectedPromptWord === index}
+                    onClick={() => setSelectedPromptWord(selectedPromptWord === index ? null : index)}>
+                    {part}
+                  </button>)}
+              </div>}
             {(!toSwedish || feedback) && <button className="sound" onClick={listen} aria-label="Luister naar de Zweedse uitspraak">♫</button>}
           </div>
+          {!vocabulary && !speech && selectedPromptWord !== null &&
+            <p className="word-gloss" role="status">
+              <strong>{prompt.split(/(\s+)/)[selectedPromptWord]}</strong>
+              <span> → {wordMeaning(prompt.split(/(\s+)/)[selectedPromptWord], toSwedish ? 'nl' : 'sv')}</span>
+            </p>}
           {speech && <p className="hint">{card.dutch[0]} Luister en vergelijk je uitspraak met het voorbeeld.</p>}
           {audioMessage && <p role="status" className="hint">{audioMessage}</p>}
           {vocabulary && <div className="options">
