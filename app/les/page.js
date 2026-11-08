@@ -64,6 +64,26 @@ const exerciseCycle = [
   'toSwedish', 'toDutch', 'word', 'toSwedish', 'toDutch', 'speech',
   'toSwedish', 'toDutch', 'word', 'toSwedish', 'toDutch', 'word',
 ]
+const ROUND_LENGTH = exerciseCycle.length
+
+function newRun(section) {
+  return { section, answers: [] }
+}
+
+function finishRun(progress, card, correct, skipped = false, given = '') {
+  const section = progress.section ?? 0
+  const previous = progress.activeRun?.section === section && progress.activeRun.answers.length < ROUND_LENGTH
+    ? progress.activeRun : newRun(section)
+  const answer = {
+    id: card.id, kind: card.kind, correct, skipped,
+    prompt: card.kind === 'toSwedish' ? card.dutch[0] : card.swedish,
+    expected: card.kind === 'toDutch' || card.kind === 'word' ? card.dutch[0] : card.swedish,
+    given,
+  }
+  const run = { ...previous, answers: [...previous.answers, answer] }
+  return { ...progress, activeRun: run, results: run.answers.length === ROUND_LENGTH
+    ? { ...progress.results, [section]: run } : progress.results }
+}
 const starterTiles = {
   toSwedish: ['tåg', 'karta', 'biljett', 'här', 'du', 'vi'],
   toDutch: ['trein', 'kaart', 'kaartje', 'hier', 'jij', 'wij'],
@@ -98,7 +118,7 @@ function makeCard(progress, section, previous) {
     const { id, swedish, dutch } = progress.generatedPending
     return { id, kind: 'toSwedish', swedish, dutch: [dutch], tiles: makeTiles(swedish, 'toSwedish', progress), generated: true }
   }
-  const slot = progress.step % exerciseCycle.length
+  const slot = progress.activeRun?.section === section ? progress.activeRun.answers.length % ROUND_LENGTH : 0
   const kind = exerciseCycle[slot]
   if (kind === 'word') return wordCard(nextWord(progress, section, previous), progress.step)
 
@@ -191,8 +211,13 @@ export default function Home() {
       const requested = Number(new URLSearchParams(window.location.search).get('sectie'))
       const current = Number.isInteger(requested) && requested >= 1 && requested <= 10 ? requested - 1 : data.section ?? 0
       const selected = { ...data, section: current }
+      const restarting = new URLSearchParams(window.location.search).has('opnieuw')
+      if (restarting || selected.activeRun?.section !== current || selected.activeRun.answers.length >= ROUND_LENGTH) {
+        selected.activeRun = newRun(current)
+      }
+      if (restarting) selected.lessonPositions = { ...selected.lessonPositions, [current]: 0 }
       setProgress(selected)
-      if (current !== data.section) saveProgress(selected).catch(() => setStorageError(true))
+      if (current !== data.section || selected.activeRun !== data.activeRun || restarting) saveProgress(selected).catch(() => setStorageError(true))
       setSection(current)
       setCard(makeCard(selected, current))
     }).catch(() => {
@@ -218,7 +243,7 @@ export default function Home() {
 
   function update(data) {
     setProgress(data)
-    saveProgress(data).then(() => setStorageError(false)).catch(() => setStorageError(true))
+    return saveProgress(data).then(() => setStorageError(false)).catch(() => setStorageError(true))
   }
 
   async function listen() {
@@ -409,7 +434,7 @@ export default function Home() {
         for (let j = 1; j <= b.length; j++) row[j] = Math.min(row[j - 1] + 1, previous[j] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
         previous = row
       }
-      submit(previous[b.length] <= Math.max(2, Math.floor(b.length * 0.18)))
+      submit(previous[b.length] <= Math.max(2, Math.floor(b.length * 0.18)), data.text)
     } catch (error) {
       if (attempt.current === current) setAudioMessage(error.message)
     } finally {
@@ -417,14 +442,15 @@ export default function Home() {
     }
   }
 
-  function submit(value) {
+  function submit(value, spoken = '') {
     if (feedback) return
     const expected = card.kind === 'toSwedish' ? [card.swedish] : card.dutch
     const correct = card.kind === 'word' ? value === expected
       : card.kind === 'speech' ? value === true
       : expected.some(option => normalize(option) === normalize(value))
     const streak = correct ? (progress.correctStreak ?? 0) + 1 : 0
-    const updated = { ...recordCard(progress, card, correct), correctStreak: streak }
+    const updated = finishRun({ ...recordCard(progress, card, correct), correctStreak: streak }, card, correct, false,
+      card.kind === 'speech' ? spoken : card.kind === 'word' ? value : selectedTiles.map(tile => tile.word).join(' '))
     if (correct) playSuccessTune()
     if (correct && streak % 5 === 0) {
       clearTimeout(confettiTimer.current)
@@ -434,6 +460,10 @@ export default function Home() {
     update(updated)
     setFeedback({ correct })
     autoAdvance.current = setTimeout(() => {
+      if (updated.activeRun.answers.length >= ROUND_LENGTH) {
+        window.location.assign(`/resultaat?sectie=${section + 1}`)
+        return
+      }
       const next = makeCard(updated, section, card.kind === 'word' ? card.id : undefined)
       show(next, section)
     }, 2000)
@@ -459,8 +489,13 @@ export default function Home() {
   }
 
   function advance() {
-    const updated = feedback ? progress : { ...recordCard(progress, card, false), correctStreak: 0 }
+    const updated = feedback ? progress : finishRun({ ...recordCard(progress, card, false), correctStreak: 0 }, card, false, true)
     if (!feedback) update(updated)
+    if (updated.activeRun.answers.length >= ROUND_LENGTH) {
+      clearTimeout(autoAdvance.current)
+      saveProgress(updated).finally(() => window.location.assign(`/resultaat?sectie=${section + 1}`))
+      return
+    }
     const next = makeCard(updated, section, card.kind === 'word' ? card.id : undefined)
     show(next, section)
   }
@@ -482,7 +517,7 @@ export default function Home() {
       <section className="card" aria-label="Oefening">
         <div className="card-top"><span>SECTIE {String(section + 1).padStart(2, '0')}</span>
           <span>{vocabulary ? 'WOORDEN' : speech ? 'SPREKEN' : toSwedish ? 'NL → SV' : 'SV → NL'}</span></div>
-        <progress className="lesson-progress" value={progress.step % exerciseCycle.length} max={exerciseCycle.length} aria-label="Voortgang oefenronde" />
+        <progress className="lesson-progress" value={progress.activeRun?.section === section ? progress.activeRun.answers.length : 0} max={ROUND_LENGTH} aria-label="Voortgang oefenronde" />
         <h2 ref={title} tabIndex={-1}>{!ready ? 'Voortgang laden…' : vocabulary ? 'Wat betekent dit woord?' : speech ? 'Zeg deze zin hardop' : 'Bouw de vertaling'}</h2>
         {ready && <>
           <div className={vocabulary || speech ? "prompt" : "prompt sentence-prompt"}>
