@@ -51,7 +51,7 @@ export default function Overview() {
         const count = words.slice(start, start + SECTION_SIZE).filter((_, offset) => progress.words[start + offset]?.first).length
         return <a key={index} href={`/les?sectie=${index + 1}`} className="lesson-row">
           <span className="lesson-row-number">{String(index + 1).padStart(2,'0')}</span>
-          <span className="lesson-row-title">{['Aankomen','Onderweg','In het café','Eten bestellen','In het hotel','De stad in','Winkelen','Een praatje','Praktische vragen','Zelfstandig op reis'][index]}<small>Woorden {start + 1}–{start + 20}</small></span>
+          <span className="lesson-row-title">{['Drie woorden','De eerste stappen','Korte vragen','Korte antwoorden','Iets meer woorden','Onderweg','In het café','In de stad','Meer zelf zeggen','Zelfstandig op reis'][index]}<small>Woorden {start + 1}–{start + 20}</small></span>
           <span className="lesson-row-count">{count} / 20</span><span className="lesson-row-arrow" aria-hidden="true">→</span>
         </a>
       })}</div>

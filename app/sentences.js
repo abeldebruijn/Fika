@@ -91,3 +91,35 @@ for (const [dish, dutch] of dishes) {
   }
 }
 sentences.push(...moreTravel)
+
+// Compact starter phrases replace the longest generated examples. Existing IDs stay stable.
+const starters = [
+  ['Jag vill gå.', ['Ik wil gaan.']],
+  ['Jag vill äta.', ['Ik wil eten.']],
+  ['Jag vill dricka.', ['Ik wil drinken.']],
+  ['Vi behöver hjälp.', ['Wij hebben hulp nodig.']],
+  ['Jag har pengar.', ['Ik heb geld.']],
+  ['Jag har tid.', ['Ik heb tijd.']],
+  ['Jag är hungrig.', ['Ik heb honger.']],
+  ['Jag är törstig.', ['Ik heb dorst.']],
+  ['Jag är här.', ['Ik ben hier.']],
+  ['Vi är här.', ['Wij zijn hier.']],
+  ['Det är bra.', ['Dat is goed.']],
+  ['Det är gott.', ['Dat is lekker.']],
+  ['Var är toaletten?', ['Waar is het toilet?']],
+  ['Var är hotellet?', ['Waar is het hotel?']],
+  ['Var är stationen?', ['Waar is het station?']],
+  ['Kan jag betala?', ['Kan ik betalen?']],
+  ['Kan jag sitta?', ['Kan ik zitten?']],
+  ['Kan du hjälpa?', ['Kun je helpen?']],
+  ['Har ni kaffe?', ['Hebben jullie koffie?']],
+  ['Är det öppet?', ['Is het open?']],
+]
+// Replace 20 generated items while retaining the 200 sentence course.
+sentences.splice(180, 20, ...starters)
+
+export const sentenceOrder = sentences.map((_, id) => id).sort((a, b) => {
+  const lengthA = sentences[a][0].replace(/[.!?]/g, '').split(' ').length
+  const lengthB = sentences[b][0].replace(/[.!?]/g, '').split(' ').length
+  return lengthA - lengthB || a - b
+})

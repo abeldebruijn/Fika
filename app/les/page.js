@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import words from '../words.json'
-import { sentences } from '../sentences'
+import { sentences, sentenceOrder } from '../sentences'
 import { wordMeaning } from '../glossary'
 import { initialProgress, nextWord, record } from '../learning'
 import { loadProgress, saveProgress } from '../storage'
@@ -69,12 +69,13 @@ function makeCard(progress, section, previous) {
   const kind = exerciseCycle[slot]
   if (kind === 'word') return wordCard(nextWord(progress, section, previous), progress.step)
 
+  const lessonIds = sentenceOrder.slice(section * 20, section * 20 + 20)
   const sentenceProgress = progress.sentences ?? {}
-  const due = Object.entries(sentenceProgress)
-    .filter(([_, item]) => item.due <= progress.step)
-    .sort((a, b) => a[1].due - b[1].due)
+  const due = lessonIds.filter(id => sentenceProgress[id]?.due <= progress.step)
+    .sort((a, b) => sentenceProgress[a].due - sentenceProgress[b].due)
   const shouldReview = due.length > 0 && progress.step % 3 === 0
-  const id = shouldReview ? Number(due[0][0]) : (progress.nextSentence ?? 0) % sentences.length
+  const position = progress.lessonPositions?.[section] ?? 0
+  const id = shouldReview ? due[0] : lessonIds[position % lessonIds.length]
   const [swedish, dutch] = sentences[id]
   const tiles = kind === 'speech' ? [] : makeTiles(kind === 'toSwedish' ? swedish : dutch[0], kind, progress)
   return { id, kind, swedish, dutch, tiles, review: shouldReview }
@@ -97,7 +98,10 @@ function recordCard(progress, card, correct) {
   return {
     ...progress,
     step,
-    nextSentence: card.review ? progress.nextSentence : (progress.nextSentence ?? 0) + 1,
+    lessonPositions: {
+      ...progress.lessonPositions,
+      [progress.section ?? 0]: (progress.lessonPositions?.[progress.section ?? 0] ?? 0) + (card.review ? 0 : 1),
+    },
     promptWords,
     sentences: {
       ...progress.sentences,

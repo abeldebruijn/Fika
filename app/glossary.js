@@ -69,6 +69,15 @@ Object.assign(dutch, {
   zonder:'utan',
 })
 
+Object.assign(swedish, {
+  vill:'wil', äta:'eten', dricka:'drinken', pengar:'geld', hungrig:'hongerig / honger',
+  törstig:'dorstig / dorst', gott:'lekker', hjälpa:'helpen',
+})
+Object.assign(dutch, {
+  wij:'vi', tijd:'tid', eten:'äta', drinken:'dricka', geld:'pengar', honger:'hungrig',
+  dorst:'törstig', lekker:'gott', helpen:'hjälpa', zijn:'är',
+})
+
 export function wordMeaning(word, language) {
   const key = word.toLocaleLowerCase(language).replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '')
   return (language === 'sv' ? swedish : dutch)[key] ?? 'Vertaling niet beschikbaar'
