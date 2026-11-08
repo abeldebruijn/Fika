@@ -127,7 +127,12 @@ export default function Home() {
   const [audioMessage, setAudioMessage] = useState('')
   const [recording, setRecording] = useState(false)
   const [audioUrl, setAudioUrl] = useState('')
+  const [confetti, setConfetti] = useState(false)
   const recorder = useRef(null)
+  const meterCanvas = useRef(null)
+  const meter = useRef(null)
+  const successAudio = useRef(null)
+  const confettiTimer = useRef(null)
   const attempt = useRef(0)
   const title = useRef(null)
   const autoAdvance = useRef(null)
@@ -153,7 +158,13 @@ export default function Home() {
     return () => { active = false }
   }, [])
 
-  useEffect(() => () => clearTimeout(autoAdvance.current), [])
+  useEffect(() => () => {
+    clearTimeout(autoAdvance.current)
+    clearTimeout(confettiTimer.current)
+    stopMeter()
+    if (recorder.current?.state === 'recording') recorder.current.stop()
+    successAudio.current?.close().catch(() => {})
+  }, [])
 
   useEffect(() => () => {
     if (audioUrl) URL.revokeObjectURL(audioUrl)
@@ -185,6 +196,97 @@ export default function Home() {
     engine.speak(utterance)
   }
 
+  function playSuccessTune() {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext
+      if (!AudioContext) return
+      const context = successAudio.current?.state === 'closed' ? null : successAudio.current
+      const audio = context ?? new AudioContext()
+      successAudio.current = audio
+      // Start while the answer button's user gesture is still active on iOS Safari.
+      audio.resume().catch(() => {})
+      const start = audio.currentTime + 0.02
+      const notes = [
+        [523.25, 0, 0.22], [659.25, 0.23, 0.22], [783.99, 0.47, 0.24],
+        [1046.5, 0.75, 0.31], [783.99, 1.12, 0.33],
+      ]
+      for (const [frequency, offset, duration] of notes) {
+        const oscillator = audio.createOscillator()
+        const volume = audio.createGain()
+        oscillator.type = 'sine'
+        oscillator.frequency.value = frequency
+        volume.gain.setValueAtTime(0.0001, start + offset)
+        volume.gain.exponentialRampToValueAtTime(0.09, start + offset + 0.025)
+        volume.gain.exponentialRampToValueAtTime(0.0001, start + offset + duration)
+        oscillator.connect(volume).connect(audio.destination)
+        oscillator.start(start + offset)
+        oscillator.stop(start + offset + duration)
+      }
+    } catch {
+      // Audio is optional; checking an answer must still work if sound is blocked.
+    }
+  }
+
+  function stopMeter() {
+    const current = meter.current
+    if (!current) return
+    meter.current = null
+    cancelAnimationFrame(current.frame)
+    current.source.disconnect()
+    current.context.close().catch(() => {})
+  }
+
+  function startMeter(stream) {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext
+      if (!AudioContext) return
+      const context = new AudioContext()
+      const source = context.createMediaStreamSource(stream)
+      const analyser = context.createAnalyser()
+      analyser.fftSize = 1024
+      source.connect(analyser)
+      const samples = new Uint8Array(analyser.fftSize)
+      const current = { context, source, frame: 0 }
+      meter.current = current
+      function draw() {
+        if (meter.current !== current) return
+        const canvas = meterCanvas.current
+        if (canvas) {
+          const dpr = Math.min(window.devicePixelRatio || 1, 2)
+          const width = canvas.clientWidth
+          const height = canvas.clientHeight
+          if (canvas.width !== Math.round(width * dpr) || canvas.height !== Math.round(height * dpr)) {
+            canvas.width = Math.round(width * dpr)
+            canvas.height = Math.round(height * dpr)
+          }
+          const brush = canvas.getContext('2d')
+          if (brush) {
+            brush.setTransform(dpr, 0, 0, dpr, 0, 0)
+            brush.clearRect(0, 0, width, height)
+            analyser.getByteTimeDomainData(samples)
+            brush.fillStyle = '#1c6672'
+            const count = 32
+            const gap = 3
+            const bar = (width - gap * (count - 1)) / count
+            for (let i = 0; i < count; i++) {
+              let peak = 0
+              const from = Math.floor(i * samples.length / count)
+              const to = Math.floor((i + 1) * samples.length / count)
+              for (let j = from; j < to; j++) peak = Math.max(peak, Math.abs(samples[j] - 128) / 128)
+              const size = Math.max(3, Math.min(height - 4, peak * height * 3.2))
+              brush.fillRect(i * (bar + gap), (height - size) / 2, bar, size)
+            }
+          }
+        }
+        current.frame = requestAnimationFrame(draw)
+      }
+      context.resume().catch(() => {})
+      current.frame = requestAnimationFrame(draw)
+    } catch {
+      stopMeter()
+    }
+  }
+
   async function toggleRecording() {
     if (recorder.current?.state === 'recording') {
       recorder.current.stop()
@@ -204,6 +306,7 @@ export default function Home() {
         recorder.current = media
         media.ondataavailable = event => chunks.push(event.data)
         media.onstop = () => {
+          stopMeter()
           stream.getTracks().forEach(track => track.stop())
           if (attempt.current !== current) return
           setRecording(false)
@@ -211,7 +314,9 @@ export default function Home() {
         }
         media.start()
         setRecording(true)
+        startMeter(stream)
       } catch (error) {
+        stopMeter()
         stream.getTracks().forEach(track => track.stop())
         throw error
       }
@@ -226,7 +331,14 @@ export default function Home() {
     const correct = card.kind === 'word' ? value === expected
       : card.kind === 'speech' ? value === true
       : expected.some(option => normalize(option) === normalize(value))
-    const updated = recordCard(progress, card, correct)
+    const streak = correct ? (progress.correctStreak ?? 0) + 1 : 0
+    const updated = { ...recordCard(progress, card, correct), correctStreak: streak }
+    if (correct) playSuccessTune()
+    if (correct && streak % 5 === 0) {
+      clearTimeout(confettiTimer.current)
+      setConfetti(true)
+      confettiTimer.current = setTimeout(() => setConfetti(false), 2400)
+    }
     update(updated)
     setFeedback({ correct })
     autoAdvance.current = setTimeout(() => {
@@ -252,7 +364,7 @@ export default function Home() {
   }
 
   function advance() {
-    const updated = feedback ? progress : recordCard(progress, card, false)
+    const updated = feedback ? progress : { ...recordCard(progress, card, false), correctStreak: 0 }
     if (!feedback) update(updated)
     const next = makeCard(updated, section, card.kind === 'word' ? card.id : undefined)
     show(next, section)
@@ -306,6 +418,7 @@ export default function Home() {
           </div>}
           {speech && <div className="speech">
             <button onClick={toggleRecording}>{recording ? 'Stop opname' : 'Neem jezelf op'}</button>
+            {recording && <div className="mic-meter" role="status" aria-label="Microfoon actief: live geluidsniveau"><span className="mic-dot" /> <canvas ref={meterCanvas} aria-hidden="true" /><span>Microfoon actief</span></div>}
             {audioUrl && <audio controls src={audioUrl} aria-label="Je eigen uitspraak" />}
           </div>}
           {!speech && !vocabulary && <form id="translation-form" className="translation" onSubmit={event => {
@@ -347,5 +460,6 @@ export default function Home() {
 
     </div>
     {storageError && <p role="alert" className="save-error">Je browser kon de voortgang niet lokaal opslaan.</p>}
+    {confetti && <div className="confetti-layer" aria-hidden="true">{Array.from({ length: 32 }, (_, i) => <i key={i} style={{ '--x': `${(i * 37 + 17) % 100}%`, '--drift': `${(i % 2 ? 1 : -1) * (20 + i * 4)}px`, '--delay': `${(i % 7) * 0.055}s`, '--color': ['#edbf4a', '#2e9eb0', '#ef7891', '#89b774'][i % 4] }} />)}</div>}
   </main>
 }
