@@ -130,6 +130,7 @@ export default function Home() {
   const recorder = useRef(null)
   const attempt = useRef(0)
   const title = useRef(null)
+  const autoAdvance = useRef(null)
 
   useEffect(() => {
     let active = true
@@ -151,6 +152,8 @@ export default function Home() {
       .finally(() => active && setReady(true))
     return () => { active = false }
   }, [])
+
+  useEffect(() => () => clearTimeout(autoAdvance.current), [])
 
   useEffect(() => () => {
     if (audioUrl) URL.revokeObjectURL(audioUrl)
@@ -223,11 +226,17 @@ export default function Home() {
     const correct = card.kind === 'word' ? value === expected
       : card.kind === 'speech' ? value === true
       : expected.some(option => normalize(option) === normalize(value))
-    update(recordCard(progress, card, correct))
+    const updated = recordCard(progress, card, correct)
+    update(updated)
     setFeedback({ correct })
+    autoAdvance.current = setTimeout(() => {
+      const next = makeCard(updated, section, card.kind === 'word' ? card.id : undefined)
+      show(next, section)
+    }, 2000)
   }
 
   function show(next, requestedSection = section) {
+    clearTimeout(autoAdvance.current)
     attempt.current++
     if (recorder.current?.state === 'recording') recorder.current.stop()
     setRecording(false)
@@ -298,9 +307,8 @@ export default function Home() {
           {speech && <div className="speech">
             <button onClick={toggleRecording}>{recording ? 'Stop opname' : 'Neem jezelf op'}</button>
             {audioUrl && <audio controls src={audioUrl} aria-label="Je eigen uitspraak" />}
-            <button disabled={!!feedback} onClick={() => submit(true)}>Ik heb het uitgesproken</button>
           </div>}
-          {!speech && !vocabulary && <form className="translation" onSubmit={event => {
+          {!speech && !vocabulary && <form id="translation-form" className="translation" onSubmit={event => {
             event.preventDefault()
             if (selectedTiles.length) submit(selectedTiles.map(tile => tile.word).join(' '))
           }}>
@@ -321,7 +329,6 @@ export default function Home() {
                 </button>
               })}
             </div>
-            <button className="check" type="submit" disabled={!!feedback || !selectedTiles.length}>Controleer</button>
           </form>}
           <div className="feedback" aria-live="polite">
             {feedback && <p className={feedback.correct ? 'success' : 'retry'}>
@@ -329,7 +336,12 @@ export default function Home() {
               {!speech && <> <strong>{toSwedish ? card.swedish : vocabulary ? card.dutch : card.dutch[0]}</strong></>}
             </p>}
           </div>
-          <button className="next" onClick={advance}>{feedback ? 'Volgende' : 'Overslaan en verder'} <span aria-hidden="true">→</span></button>
+          <div className="lesson-actions">
+            <button className="check" type="submit" form={speech || vocabulary ? undefined : 'translation-form'}
+              disabled={!!feedback || (vocabulary ? true : !speech && !selectedTiles.length)}
+              onClick={speech ? () => submit(true) : undefined}>Controleer</button>
+            <button className="next" onClick={advance}>{feedback ? 'Volgende' : 'Overslaan'} <span aria-hidden="true">→</span></button>
+          </div>
         </>}
       </section>
 
