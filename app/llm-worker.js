@@ -29,7 +29,18 @@ self.onmessage = async ({ data }) => {
       ], { max_new_tokens: 40, do_sample: false })
       const generated = result[0]?.generated_text
       const output = Array.isArray(generated) ? generated.at(-1)?.content : generated
-      self.postMessage({ type: 'result', output: String(output ?? '').trim() })
+      const sentence = String(output ?? '').trim()
+      const tokens = sentence.toLocaleLowerCase('sv').match(/\p{L}+/gu) ?? []
+      if (!sentence || (tokens.length >= 5 && new Set(tokens).size <= 2)) {
+        self.postMessage({
+          type: 'error',
+          name: 'OutputQualityError',
+          message: 'Het model produceerde geen bruikbare Zweedse zin.',
+          stack: `Modelantwoord: ${sentence || '(leeg)'}`,
+        })
+        return
+      }
+      self.postMessage({ type: 'result', output: sentence })
     }
   } catch (error) {
     generator = undefined
