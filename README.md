@@ -3,7 +3,9 @@
 Next.js-app om 200 veelgebruikte Zweedse woorden te oefenen. Start lokaal met
 `npm ci` en `npm run dev`. Voor productie gebruik je `npm run build` en
 `npm start`. Op Vercel volstaat het Next.js-preset zonder omgevingsvariabelen.
-De browser leest Zweedse woorden en zinnen voor met een beschikbare Zweedse stem.
+Zinnen bouwen is de hoofdoefening. Je kiest woorden uit een woordbank en kunt
+gekozen tegels terugleggen. Eerder goed beantwoorde woorden komen als extra
+keuzes terug. De browser leest Zweedse woorden en zinnen voor met een beschikbare Zweedse stem.
 Spreekoefeningen laten je lokaal opnemen en terugluisteren. De app beoordeelt
 de uitspraak niet automatisch.
 

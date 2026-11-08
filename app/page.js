@@ -24,12 +24,58 @@ function wordCard(id, step) {
   return { id, kind: 'word', swedish, dutch, options: distractors }
 }
 
-function makeCard(progress, section, previous, allowBonus = true) {
-  const id = nextWord(progress, section, previous)
-  if (!allowBonus || progress.step === 0 || progress.step % 4 !== 0) return wordCard(id, progress.step)
-  const number = progress.step / 4 - 1
-  const [swedish, dutch, related] = sentences[Math.floor(number / 3) % sentences.length]
-  return { id: related, kind: ['toSwedish', 'toDutch', 'speech'][number % 3], swedish, dutch }
+const exerciseCycle = [
+  'toSwedish', 'toDutch', 'word', 'toSwedish', 'toDutch', 'speech',
+  'toSwedish', 'toDutch', 'word', 'toSwedish', 'toDutch', 'word',
+]
+const starterTiles = {
+  toSwedish: ['och', 'inte', 'nu', 'här', 'du', 'vi'],
+  toDutch: ['en', 'niet', 'nu', 'hier', 'jij', 'wij'],
+}
+
+function makeTiles(sentence, kind, progress) {
+  const required = normalize(sentence).split(' ')
+  const learned = Object.entries(progress.words)
+    .filter(([, word]) => word.first && word.level > 0)
+    .sort(([, a], [, b]) => b.level - a.level)
+    .flatMap(([id]) => {
+      const [swedish, dutch] = words[id]
+      return kind === 'toSwedish' ? [swedish] : dutch.split(' / ')
+    })
+    .map(normalize)
+    .filter(word => /^\p{L}+$/u.test(word))
+  const extras = [...new Set([...learned, ...starterTiles[kind]])]
+    .filter(word => !required.includes(word))
+    .slice(0, 3)
+  const tiles = [...required, ...extras].map((word, id) => ({ word, id }))
+  for (let i = tiles.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    const tile = tiles[i]
+    tiles[i] = tiles[j]
+    tiles[j] = tile
+  }
+  return tiles
+}
+
+function makeCard(progress, section, previous) {
+  const slot = progress.step % exerciseCycle.length
+  const kind = exerciseCycle[slot]
+  if (kind === 'word') return wordCard(nextWord(progress, section, previous), progress.step)
+
+  const cycle = Math.floor(progress.step / exerciseCycle.length)
+  const translations = exerciseCycle.slice(0, slot)
+    .filter(type => type === 'toSwedish' || type === 'toDutch').length
+  // Change the sentence paired with each direction on subsequent passes.
+  const translationNumber = cycle * 8 + translations
+  const index = kind === 'speech' ? cycle : translationNumber + Math.floor(translationNumber / sentences.length)
+  const [swedish, dutch, related] = sentences[index % sentences.length]
+  const tiles = kind === 'speech' ? [] : makeTiles(kind === 'toSwedish' ? swedish : dutch[0], kind, progress)
+  return { id: related, kind, swedish, dutch, tiles }
+}
+
+function recordCard(progress, card, correct) {
+  if (card.kind === 'word') return record(progress, card.id, correct)
+  return { ...progress, step: progress.step + 1 }
 }
 
 export default function Home() {
@@ -38,6 +84,7 @@ export default function Home() {
   const [section, setSection] = useState(0)
   const [card, setCard] = useState(() => wordCard(0, 0))
   const [answer, setAnswer] = useState('')
+  const [selectedTiles, setSelectedTiles] = useState([])
   const [feedback, setFeedback] = useState(null)
   const [storageError, setStorageError] = useState(false)
   const [audioMessage, setAudioMessage] = useState('')
@@ -56,8 +103,12 @@ export default function Home() {
       const current = Math.floor(first / SECTION_SIZE)
       setProgress(data)
       setSection(current)
-      setCard(wordCard(first, data.step))
-    }).catch(() => active && setStorageError(true))
+      setCard(makeCard(data, current))
+    }).catch(() => {
+      if (!active) return
+      setStorageError(true)
+      setCard(makeCard(initialProgress, 0))
+    })
       .finally(() => active && setReady(true))
     return () => { active = false }
   }, [])
@@ -133,7 +184,7 @@ export default function Home() {
     const correct = card.kind === 'word' ? value === expected
       : card.kind === 'speech' ? value === true
       : expected.some(option => normalize(option) === normalize(value))
-    update(record(progress, card.id, correct, card.kind === 'word'))
+    update(recordCard(progress, card, correct))
     setFeedback({ correct })
   }
 
@@ -144,6 +195,7 @@ export default function Home() {
     setAudioUrl('')
     setAudioMessage('')
     setAnswer('')
+    setSelectedTiles([])
     setFeedback(null)
     setSection(requestedSection)
     setCard(next)
@@ -151,9 +203,9 @@ export default function Home() {
   }
 
   function advance() {
-    const updated = feedback ? progress : record(progress, card.id, false, card.kind === 'word')
+    const updated = feedback ? progress : recordCard(progress, card, false)
     if (!feedback) update(updated)
-    const next = makeCard(updated, section, card.id)
+    const next = makeCard(updated, section, card.kind === 'word' ? card.id : undefined)
     show(next, next.kind === 'word' ? undefined : section)
   }
 
@@ -198,9 +250,10 @@ export default function Home() {
       <section className="card" aria-label="Oefening">
         <div className="card-top"><span>SECTIE {String(section + 1).padStart(2, '0')}</span>
           <span>{vocabulary ? 'WOORDEN' : speech ? 'SPREKEN' : toSwedish ? 'NL → SV' : 'SV → NL'}</span></div>
-        <h2 ref={title} tabIndex={-1}>{!ready ? 'Voortgang laden…' : vocabulary ? 'Wat betekent dit woord?' : speech ? 'Zeg deze zin hardop' : 'Vertaal deze zin'}</h2>
+        <progress className="lesson-progress" value={progress.step % exerciseCycle.length} max={exerciseCycle.length} aria-label="Voortgang oefenronde" />
+        <h2 ref={title} tabIndex={-1}>{!ready ? 'Voortgang laden…' : vocabulary ? 'Wat betekent dit woord?' : speech ? 'Zeg deze zin hardop' : 'Bouw de vertaling'}</h2>
         {ready && <>
-          <div className="prompt">
+          <div className={vocabulary || speech ? "prompt" : "prompt sentence-prompt"}>
             <strong lang={toSwedish ? 'nl' : 'sv'}>{prompt}</strong>
             {(!toSwedish || feedback) && <button className="sound" onClick={listen} aria-label="Luister naar de Zweedse uitspraak">♫</button>}
           </div>
@@ -216,12 +269,28 @@ export default function Home() {
             {audioUrl && <audio controls src={audioUrl} aria-label="Je eigen uitspraak" />}
             <button disabled={!!feedback} onClick={() => submit(true)}>Ik heb het uitgesproken</button>
           </div>}
-          {!speech && !vocabulary && <form className="translation" onSubmit={event => { event.preventDefault(); if (answer.trim()) submit(answer) }}>
-            <input aria-label="Jouw vertaling" placeholder="Typ je vertaling…" value={answer}
-              disabled={!!feedback} onChange={event => setAnswer(event.target.value)} autoComplete="off" />
-            {toSwedish && <div className="letters">{['å', 'ä', 'ö'].map(letter => <button type="button" key={letter} disabled={!!feedback}
-              onClick={() => setAnswer(answer + letter)}>{letter}</button>)}</div>}
-            <button type="submit" disabled={!!feedback || !answer.trim()}>Controleer</button>
+          {!speech && !vocabulary && <form className="translation" onSubmit={event => {
+            event.preventDefault()
+            if (selectedTiles.length) submit(selectedTiles.map(tile => tile.word).join(' '))
+          }}>
+            <div className="tile-answer" role="group" aria-label="Jouw zin">
+              {selectedTiles.length ? selectedTiles.map(tile => <button type="button" key={tile.id}
+                lang={toSwedish ? 'sv' : 'nl'} aria-label={`Leg ${tile.word} terug`}
+                disabled={!!feedback} onClick={() => setSelectedTiles(tiles => tiles.filter(item => item.id !== tile.id))}>
+                {tile.word}
+              </button>) : <span>Tik de woorden aan in de juiste volgorde</span>}
+            </div>
+            <div className="tile-bank" role="group" aria-label="Woordbank">
+              {card.tiles.map(tile => {
+                const used = selectedTiles.some(item => item.id === tile.id)
+                return <button type="button" key={tile.id} lang={toSwedish ? 'sv' : 'nl'}
+                  disabled={!!feedback} aria-disabled={used}
+                  onClick={() => setSelectedTiles(tiles => tiles.some(item => item.id === tile.id) ? tiles : [...tiles, tile])}>
+                  {tile.word}
+                </button>
+              })}
+            </div>
+            <button className="check" type="submit" disabled={!!feedback || !selectedTiles.length}>Controleer</button>
           </form>}
           <div className="feedback" aria-live="polite">
             {feedback && <p className={feedback.correct ? 'success' : 'retry'}>
