@@ -11,6 +11,35 @@ function normalize(text) {
   return text.normalize('NFC').toLowerCase().trim().replace(/[.!?,;:]/g, '').replace(/\s+/g, ' ')
 }
 
+async function recordingToWav(blob) {
+  const AudioContext = window.AudioContext || window.webkitAudioContext
+  if (!AudioContext) throw new Error('Deze browser kan de opname niet omzetten naar WAV.')
+  const context = new AudioContext()
+  try {
+    const decoded = await context.decodeAudioData(await blob.arrayBuffer())
+    const rate = decoded.sampleRate
+    const length = decoded.length
+    if (length * 2 + 44 > 2_000_000) throw new Error('De opname is te lang. Neem een kortere zin op.')
+    const bytes = new ArrayBuffer(44 + length * 2)
+    const view = new DataView(bytes)
+    const label = (offset, value) => { for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i)) }
+    label(0, 'RIFF'); view.setUint32(4, bytes.byteLength - 8, true)
+    label(8, 'WAVE'); label(12, 'fmt '); view.setUint32(16, 16, true)
+    view.setUint16(20, 1, true); view.setUint16(22, 1, true)
+    view.setUint32(24, rate, true); view.setUint32(28, rate * 2, true)
+    view.setUint16(32, 2, true); view.setUint16(34, 16, true)
+    label(36, 'data'); view.setUint32(40, length * 2, true)
+    const channels = Array.from({ length: decoded.numberOfChannels }, (_, i) => decoded.getChannelData(i))
+    for (let i = 0; i < length; i++) {
+      const sample = Math.max(-1, Math.min(1, channels.reduce((sum, channel) => sum + channel[i], 0) / channels.length))
+      view.setInt16(44 + i * 2, sample < 0 ? sample * 32768 : sample * 32767, true)
+    }
+    return new Blob([bytes], { type: 'audio/wav' })
+  } finally {
+    context.close().catch(() => {})
+  }
+}
+
 function canShowMeaning(progress, word, language) {
   const key = `${language}:${word.toLocaleLowerCase(language).replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '')}`
   const history = progress.promptWords?.[key]
@@ -140,8 +169,12 @@ export default function Home() {
   const [audioMessage, setAudioMessage] = useState('')
   const [recording, setRecording] = useState(false)
   const [audioUrl, setAudioUrl] = useState('')
+  const [transcribing, setTranscribing] = useState(false)
+  const [transcript, setTranscript] = useState('')
   const [confetti, setConfetti] = useState(false)
   const recorder = useRef(null)
+  const recordedBlob = useRef(null)
+  const speechCache = useRef(new Map())
   const meterCanvas = useRef(null)
   const meter = useRef(null)
   const successAudio = useRef(null)
@@ -188,25 +221,36 @@ export default function Home() {
     saveProgress(data).then(() => setStorageError(false)).catch(() => setStorageError(true))
   }
 
-  function listen() {
-    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
-      setAudioMessage('Deze browser ondersteunt voorlezen niet.')
-      return
-    }
-    const engine = window.speechSynthesis
-    const utterance = new SpeechSynthesisUtterance(card.swedish)
-    utterance.lang = 'sv-SE'
-    utterance.rate = 0.85
-    const voice = engine.getVoices().find(item => item.lang.toLowerCase().startsWith('sv') && item.localService)
-    if (voice) utterance.voice = voice
-    utterance.onerror = event => {
-      if (!['interrupted', 'canceled'].includes(event.error)) {
-        setAudioMessage('Afspelen lukte niet. Controleer of je apparaat een Zweedse stem heeft.')
+  async function listen() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+    if (!AudioContext) { setAudioMessage('Deze browser ondersteunt audio niet.'); return }
+    try {
+      const audio = successAudio.current?.state === 'closed' ? null : successAudio.current
+      const context = audio ?? new AudioContext()
+      successAudio.current = context
+      // Resume on the tap so iPhone Safari allows playback after the network request.
+      const resume = context.resume()
+      setAudioMessage('Zweedse uitspraak laden…')
+      let bytes = speechCache.current.get(card.swedish)
+      if (!bytes) {
+        const result = await fetch('/api/spraak', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: card.swedish }),
+        })
+        if (!result.ok) throw new Error('De uitspraak kon niet worden geladen.')
+        bytes = await result.arrayBuffer()
+        speechCache.current.set(card.swedish, bytes)
       }
+      await resume
+      const decoded = await context.decodeAudioData(bytes.slice(0))
+      const player = context.createBufferSource()
+      player.buffer = decoded
+      player.connect(context.destination)
+      player.start()
+      setAudioMessage('')
+    } catch {
+      setAudioMessage('Afspelen lukte niet. Probeer het opnieuw.')
     }
-    setAudioMessage('')
-    engine.cancel()
-    engine.speak(utterance)
   }
 
   function playSuccessTune() {
@@ -323,7 +367,9 @@ export default function Home() {
           stream.getTracks().forEach(track => track.stop())
           if (attempt.current !== current) return
           setRecording(false)
-          setAudioUrl(URL.createObjectURL(new Blob(chunks, { type: media.mimeType })))
+          const blob = new Blob(chunks, { type: media.mimeType || chunks[0]?.type || 'audio/mp4' })
+          recordedBlob.current = blob
+          setAudioUrl(URL.createObjectURL(blob))
         }
         media.start()
         setRecording(true)
@@ -335,6 +381,39 @@ export default function Home() {
       }
     } catch {
       if (attempt.current === current) setAudioMessage('De microfoon is niet beschikbaar. Je kunt de zin hardop nazeggen en doorgaan.')
+    }
+  }
+
+  async function submitSpeech() {
+    if (!recordedBlob.current || transcribing || feedback) return
+    const current = attempt.current
+    setTranscribing(true)
+    setAudioMessage('Je Zweeds wordt herkend…')
+    try {
+      const blob = await recordingToWav(recordedBlob.current)
+      if (attempt.current !== current) return
+      const form = new FormData()
+      form.append('audio', blob, 'uitspraak.wav')
+      const result = await fetch('/api/herken', { method: 'POST', body: form })
+      const data = await result.json()
+      if (!result.ok) throw new Error(data.error ?? 'Je uitspraak kon niet worden herkend.')
+      if (attempt.current !== current) return
+      setTranscript(data.text)
+      setAudioMessage('')
+      const heard = normalize(data.text)
+      const expected = normalize(card.swedish)
+      const a = Array.from(heard), b = Array.from(expected)
+      let previous = Array.from({ length: b.length + 1 }, (_, i) => i)
+      for (let i = 1; i <= a.length; i++) {
+        const row = [i]
+        for (let j = 1; j <= b.length; j++) row[j] = Math.min(row[j - 1] + 1, previous[j] + 1, previous[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1))
+        previous = row
+      }
+      submit(previous[b.length] <= Math.max(2, Math.floor(b.length * 0.18)))
+    } catch (error) {
+      if (attempt.current === current) setAudioMessage(error.message)
+    } finally {
+      if (attempt.current === current) setTranscribing(false)
     }
   }
 
@@ -366,6 +445,9 @@ export default function Home() {
     if (recorder.current?.state === 'recording') recorder.current.stop()
     setRecording(false)
     setAudioUrl('')
+    recordedBlob.current = null
+    setTranscript('')
+    setTranscribing(false)
     setAudioMessage('')
     setAnswer('')
     setSelectedTiles([])
@@ -422,7 +504,7 @@ export default function Home() {
               <strong>{promptParts[selectedPromptWord]}</strong>
               <span> → {wordMeaning(promptParts[selectedPromptWord], toSwedish ? 'nl' : 'sv')}</span>
             </p>}
-          {speech && <p className="hint">{card.dutch[0]} Luister en vergelijk je uitspraak met het voorbeeld.</p>}
+          {speech && <p className="hint">{card.dutch[0]} Luister, spreek de zin in en controleer wat is herkend.</p>}
           {audioMessage && <p role="status" className="hint">{audioMessage}</p>}
           {vocabulary && <div className="options">
             {card.options.map(option => <button key={option} disabled={!!feedback}
@@ -430,9 +512,10 @@ export default function Home() {
               onClick={() => { setAnswer(option); submit(option) }}>{option}</button>)}
           </div>}
           {speech && <div className="speech">
-            <button onClick={toggleRecording}>{recording ? 'Stop opname' : 'Neem jezelf op'}</button>
+            <button onClick={toggleRecording} disabled={transcribing}>{recording ? 'Stop opname' : 'Neem jezelf op'}</button>
             {recording && <div className="mic-meter" role="status" aria-label="Microfoon actief: live geluidsniveau"><span className="mic-dot" /> <canvas ref={meterCanvas} aria-hidden="true" /><span>Microfoon actief</span></div>}
             {audioUrl && <audio controls src={audioUrl} aria-label="Je eigen uitspraak" />}
+            {transcript && <p className="recognized">Herkend: <strong lang="sv">{transcript}</strong></p>}
           </div>}
           {!speech && !vocabulary && <form id="translation-form" className="translation" onSubmit={event => {
             event.preventDefault()
@@ -458,14 +541,14 @@ export default function Home() {
           </form>}
           <div className="feedback" aria-live="polite">
             {feedback && <p className={feedback.correct ? 'success' : 'retry'}>
-              {speech ? 'Goed geoefend.' : feedback.correct ? 'Helemaal goed!' : vocabulary ? 'Dit woord komt later terug.' : 'Bijna. Dit is een voorbeeldantwoord.'}
-              {!speech && <> <strong>{toSwedish ? card.swedish : vocabulary ? card.dutch : card.dutch[0]}</strong></>}
+              {feedback.correct ? 'Helemaal goed!' : speech ? 'Bijna. Luister en probeer het later opnieuw.' : vocabulary ? 'Dit woord komt later terug.' : 'Bijna. Dit is een voorbeeldantwoord.'}
+              {speech ? !feedback.correct && <> <strong lang="sv">{card.swedish}</strong></> : <> <strong>{toSwedish ? card.swedish : vocabulary ? card.dutch : card.dutch[0]}</strong></>}
             </p>}
           </div>
           <div className="lesson-actions">
             <button className="check" type="submit" form={speech || vocabulary ? undefined : 'translation-form'}
-              disabled={!!feedback || (vocabulary ? true : !speech && !selectedTiles.length)}
-              onClick={speech ? () => submit(true) : undefined}>Controleer</button>
+              disabled={!!feedback || transcribing || (vocabulary ? true : speech ? !audioUrl || recording : !selectedTiles.length)}
+              onClick={speech ? submitSpeech : undefined}>{transcribing ? 'Luisteren…' : 'Controleer'}</button>
             <button className="next" onClick={advance}>{feedback ? 'Volgende' : 'Overslaan'} <span aria-hidden="true">→</span></button>
           </div>
         </>}

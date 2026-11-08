@@ -1,6 +1,6 @@
 export const runtime = 'nodejs'
 
-const model = 'google/gemini-2.5-flash-lite'
+const model = 'google/gemini-3.8-flash'
 
 function response(body, status = 200) {
   return Response.json(body, { status, headers: { 'Cache-Control': 'no-store' } })
@@ -28,7 +28,7 @@ export async function POST(request) {
       body: JSON.stringify({
         model,
         temperature: 0.5,
-        max_tokens: 180,
+        max_tokens: 300,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: `Je bent een nauwkeurige docent Zweeds voor Nederlanders op reis. Geef uitsluitend een JSON-object met twee strings: "sv" en "nl". Schrijf één natuurlijke, bruikbare reiszin van 3 tot ${maxWords} Zweedse woorden en een correcte Nederlandse vertaling. Gebruik minstens twee van de opgegeven Zweedse woorden letterlijk, indien mogelijk. Vermijd herhaling, verzonnen woorden en uitleg.` },

@@ -110,7 +110,7 @@ export default function LocalModelTest() {
     <p>Maak een nieuwe Zweedse reiszin met woorden die je al hebt geleerd. Via Vercel AI Gateway worden de gekozen woorden naar een taalmodel gestuurd. Je voortgang blijft lokaal in deze browser.</p>
     <section className="model-panel">
       <h2>Vercel AI Gateway</h2>
-      <p>Een klein model maakt een korte zin met Nederlandse vertaling. Je kunt de zin daarna meteen oefenen.</p>
+      <p>Gemini 3.8 Flash maakt een korte zin met Nederlandse vertaling. Je kunt de zin daarna meteen oefenen.</p>
       <label htmlFor="model-words">Zweedse woorden voor je reiszin</label>
       <textarea id="model-words" value={words} onChange={event => setWords(event.target.value)} rows={3} />
       <div className="model-buttons"><button onClick={generateGateway} disabled={busy || !words.trim()}>Maak een reiszin</button></div>
