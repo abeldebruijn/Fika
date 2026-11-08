@@ -29,8 +29,8 @@ const exerciseCycle = [
   'toSwedish', 'toDutch', 'word', 'toSwedish', 'toDutch', 'word',
 ]
 const starterTiles = {
-  toSwedish: ['och', 'inte', 'nu', 'här', 'du', 'vi'],
-  toDutch: ['en', 'niet', 'nu', 'hier', 'jij', 'wij'],
+  toSwedish: ['tåg', 'karta', 'biljett', 'här', 'du', 'vi'],
+  toDutch: ['trein', 'kaart', 'kaartje', 'hier', 'jij', 'wij'],
 }
 
 function makeTiles(sentence, kind, progress) {
@@ -68,9 +68,9 @@ function makeCard(progress, section, previous) {
   // Change the sentence paired with each direction on subsequent passes.
   const translationNumber = cycle * 8 + translations
   const index = kind === 'speech' ? cycle : translationNumber + Math.floor(translationNumber / sentences.length)
-  const [swedish, dutch, related] = sentences[index % sentences.length]
+  const [swedish, dutch] = sentences[index % sentences.length]
   const tiles = kind === 'speech' ? [] : makeTiles(kind === 'toSwedish' ? swedish : dutch[0], kind, progress)
-  return { id: related, kind, swedish, dutch, tiles }
+  return { kind, swedish, dutch, tiles }
 }
 
 function recordCard(progress, card, correct) {
@@ -235,7 +235,7 @@ export default function Home() {
 
     <section className="hero">
       <div><p className="eyebrow">HEJ! · JOUW TAALTRAINER</p><h1>Een beetje Zweeds,<br />elke dag.</h1>
-      <p>200 woorden, verdeeld over 10 secties.</p></div>
+      <p>Oefen Zweedse reiszinnen en 200 veelgebruikte woorden.</p></div>
       <div className="goal">
         <label htmlFor="goal">Nieuwe woorden per dag</label>
         <div className="goal-line"><strong>{daily}</strong><span> / </span><select id="goal" value={progress.goal} disabled={!ready} onChange={event => update({ ...progress, goal: Number(event.target.value) })}>
