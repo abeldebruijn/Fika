@@ -71,14 +71,73 @@ Object.assign(dutch, {
 
 Object.assign(swedish, {
   vill:'wil', äta:'eten', dricka:'drinken', pengar:'geld', hungrig:'hongerig / honger',
-  törstig:'dorstig / dorst', gott:'lekker', hjälpa:'helpen',
+  törstig:'dorstig / dorst', gott:'lekker', bra:'goed', hjälpa:'helpen',
 })
 Object.assign(dutch, {
   wij:'vi', tijd:'tid', eten:'äta', drinken:'dricka', geld:'pengar', honger:'hungrig',
-  dorst:'törstig', lekker:'gott', helpen:'hjälpa', zijn:'är',
+  dorst:'törstig', lekker:'gott', goed:'bra', helpen:'hjälpa', zijn:'är',
 })
 
-export function wordMeaning(word, language) {
-  const key = word.toLocaleLowerCase(language).replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '')
-  return (language === 'sv' ? swedish : dutch)[key] ?? 'Vertaling niet beschikbaar'
+// Phrases whose natural translations use different words or word order.
+const phrases = [
+  ['skulle vilja ha', 'wil graag'],
+  ['kan jag få', 'mag ik'],
+  ['finns det', 'is er'],
+  ['har ni', 'hebben jullie'],
+  ['behöver hjälp', 'heb hulp nodig'],
+  ['behöver hjälp', 'hebben hulp nodig'],
+  ['är hungrig', 'heb honger'],
+  ['är törstig', 'heb dorst'],
+  ['är det', 'is het'],
+  ['vilken tid', 'hoe laat'],
+  ['letar efter', 'zoek'],
+  ['ta med', 'meenemen'],
+  ['går', 'vertrekt'],
+  ['ligger', 'is'],
+  ['gå', 'gaan'],
+  ['gå', 'lopen'],
+]
+
+function wordKey(word, language) {
+  return word.normalize('NFC').toLocaleLowerCase(language).replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '')
+}
+
+export function sentenceHints(promptParts, language, answerWords) {
+  const fromSwedish = language === 'sv'
+  const dictionary = fromSwedish ? swedish : dutch
+  const reverse = fromSwedish ? dutch : swedish
+  const source = promptParts.flatMap((part, index) => /^\s+$/.test(part) ? [] : [{ word: wordKey(part, language), index }])
+  const hints = {}
+  const inAnswer = phrase => {
+    const words = phrase.split(' ')
+    const start = answerWords.findIndex((_, index) => words.every((word, offset) => answerWords[index + offset] === word))
+    return start === -1 ? null : answerWords.slice(start, start + words.length).join(' ')
+  }
+
+  const contextual = phrases.map(([sv, nl]) => fromSwedish ? [sv, nl] : [nl, sv])
+  for (const [target, meanings] of Object.entries(reverse)) {
+    for (const meaning of meanings.toLowerCase().split(' / ')) {
+      if (meaning.includes(' ')) contextual.push([meaning, target])
+    }
+  }
+
+  // Prefer direct matches for individual words. Use a phrase when the answer
+  // only expresses the meaning as a group or uses an inflected form.
+  for (const { word, index } of source) {
+    const options = Object.hasOwn(dictionary, word) ? dictionary[word].toLowerCase().split(' / ') : []
+    if (/^\p{L}+$/u.test(word)) options.push(word)
+    hints[index] = options.map(option => inAnswer(option.replace(/ \(.*\)$/, ''))).find(Boolean)
+  }
+
+  contextual.sort(([a], [b]) => b.split(' ').length - a.split(' ').length)
+  for (const [from, to] of contextual) {
+    const match = inAnswer(to)
+    if (!match) continue
+    const words = from.split(' ')
+    for (let i = 0; i < source.length; i++) {
+      if (!words.every((word, offset) => source[i + offset]?.word === word)) continue
+      for (const { index } of source.slice(i, i + words.length)) hints[index] ??= match
+    }
+  }
+  return hints
 }

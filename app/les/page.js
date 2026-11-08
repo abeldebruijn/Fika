@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import words from '../words.json'
 import { sentences, sentenceOrder } from '../sentences'
-import { wordMeaning } from '../glossary'
+import { sentenceHints } from '../glossary'
 import { initialProgress, nextWord, record } from '../learning'
 import { loadProgress, saveProgress } from '../storage'
 
@@ -506,6 +506,9 @@ export default function Home() {
   const prompt = toSwedish ? card.dutch[0] : card.swedish
   const promptLanguage = toSwedish ? 'nl' : 'sv'
   const promptParts = prompt.split(/(\s+)/)
+  const hints = vocabulary || speech ? {} : sentenceHints(
+    promptParts, promptLanguage, normalize(toSwedish ? card.swedish : card.dutch[0]).split(' '),
+  )
 
   return <main className="lesson-shell">
     <header className="lesson-header">
@@ -525,7 +528,7 @@ export default function Home() {
               <div className="prompt-words" lang={toSwedish ? 'nl' : 'sv'}>
                 {promptParts.map((part, index) => /^\s+$/.test(part) ? part :
                   <button type="button" key={index} className="prompt-word"
-                    disabled={!canShowMeaning(progress, part, promptLanguage)}
+                    disabled={!hints[index] || !canShowMeaning(progress, part, promptLanguage)}
                     aria-label={`Vertaling van ${part}`}
                     aria-expanded={selectedPromptWord === index}
                     onClick={() => setSelectedPromptWord(selectedPromptWord === index ? null : index)}>
@@ -537,7 +540,7 @@ export default function Home() {
           {!vocabulary && !speech && selectedPromptWord !== null &&
             <p className="word-gloss" role="status">
               <strong>{promptParts[selectedPromptWord]}</strong>
-              <span> → {wordMeaning(promptParts[selectedPromptWord], toSwedish ? 'nl' : 'sv')}</span>
+              <span> → {hints[selectedPromptWord]}</span>
             </p>}
           {speech && <p className="hint">{card.dutch[0]} Luister, spreek de zin in en controleer wat is herkend.</p>}
           {audioMessage && <p role="status" className="hint">{audioMessage}</p>}
