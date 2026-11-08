@@ -77,7 +77,7 @@ function finishRun(progress, card, correct, skipped = false, given = '') {
   const answer = {
     id: card.id, kind: card.kind, correct, skipped,
     prompt: card.kind === 'toSwedish' ? card.dutch[0] : card.swedish,
-    expected: card.kind === 'toDutch' || card.kind === 'word' ? card.dutch[0] : card.swedish,
+    expected: card.kind === 'word' ? card.dutch : card.kind === 'toDutch' ? card.dutch[0] : card.swedish,
     given,
   }
   const run = { ...previous, answers: [...previous.answers, answer] }
