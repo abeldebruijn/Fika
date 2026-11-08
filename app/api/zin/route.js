@@ -28,7 +28,8 @@ export async function POST(request) {
       body: JSON.stringify({
         model,
         temperature: 0.5,
-        max_tokens: 300,
+        max_tokens: 1000,
+        reasoning: { effort: 'low' },
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: `Je bent een nauwkeurige docent Zweeds voor Nederlanders op reis. Geef uitsluitend een JSON-object met twee strings: "sv" en "nl". Schrijf één natuurlijke, bruikbare reiszin van 3 tot ${maxWords} Zweedse woorden en een correcte Nederlandse vertaling. Gebruik minstens twee van de opgegeven Zweedse woorden letterlijk, indien mogelijk. Vermijd herhaling, verzonnen woorden en uitleg.` },
