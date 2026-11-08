@@ -11,6 +11,25 @@ function normalize(text) {
   return text.normalize('NFC').toLowerCase().trim().replace(/[.!?,;:]/g, '').replace(/\s+/g, ' ')
 }
 
+function loadSpeech(cache, text, generated) {
+  const existing = cache.get(text)
+  if (existing) return existing
+
+  const request = generated ? fetch('/api/spraak', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  }) : fetch(`/api/spraak?text=${encodeURIComponent(text)}`)
+  const pending = request.then(response => {
+    if (!response.ok) throw new Error('De uitspraak kon niet worden geladen.')
+    return response.arrayBuffer()
+  }).catch(error => {
+    cache.delete(text)
+    throw error
+  })
+  cache.set(text, pending)
+  return pending
+}
+
 async function recordingToWav(blob) {
   const AudioContext = window.AudioContext || window.webkitAudioContext
   if (!AudioContext) throw new Error('Deze browser kan de opname niet omzetten naar WAV.')
@@ -241,6 +260,12 @@ export default function Home() {
     if (audioUrl) URL.revokeObjectURL(audioUrl)
   }, [audioUrl])
 
+  useEffect(() => {
+    if (ready && !card.generated) {
+      loadSpeech(speechCache.current, card.swedish, false).catch(() => {})
+    }
+  }, [ready, card.swedish, card.generated])
+
   function update(data) {
     setProgress(data)
     return saveProgress(data).then(() => setStorageError(false)).catch(() => setStorageError(true))
@@ -249,6 +274,7 @@ export default function Home() {
   async function listen() {
     const AudioContext = window.AudioContext || window.webkitAudioContext
     if (!AudioContext) { setAudioMessage('Deze browser ondersteunt audio niet.'); return }
+    const current = attempt.current
     try {
       const audio = successAudio.current?.state === 'closed' ? null : successAudio.current
       const context = audio ?? new AudioContext()
@@ -256,25 +282,19 @@ export default function Home() {
       // Resume on the tap so iPhone Safari allows playback after the network request.
       const resume = context.resume()
       setAudioMessage('Zweedse uitspraak laden…')
-      let bytes = speechCache.current.get(card.swedish)
-      if (!bytes) {
-        const result = await fetch('/api/spraak', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text: card.swedish }),
-        })
-        if (!result.ok) throw new Error('De uitspraak kon niet worden geladen.')
-        bytes = await result.arrayBuffer()
-        speechCache.current.set(card.swedish, bytes)
-      }
-      await resume
+      const [bytes] = await Promise.all([
+        loadSpeech(speechCache.current, card.swedish, card.generated), resume,
+      ])
+      if (attempt.current !== current) return
       const decoded = await context.decodeAudioData(bytes.slice(0))
+      if (attempt.current !== current) return
       const player = context.createBufferSource()
       player.buffer = decoded
       player.connect(context.destination)
       player.start()
       setAudioMessage('')
     } catch {
-      setAudioMessage('Afspelen lukte niet. Probeer het opnieuw.')
+      if (attempt.current === current) setAudioMessage('Afspelen lukte niet. Probeer het opnieuw.')
     }
   }
 
@@ -459,13 +479,13 @@ export default function Home() {
     }
     update(updated)
     setFeedback({ correct })
+    const next = updated.activeRun.answers.length < ROUND_LENGTH
+      ? makeCard(updated, section, card.kind === 'word' ? card.id : undefined)
+      : null
+    if (next && !next.generated) loadSpeech(speechCache.current, next.swedish, false).catch(() => {})
     autoAdvance.current = setTimeout(() => {
-      if (updated.activeRun.answers.length >= ROUND_LENGTH) {
-        window.location.assign(`/resultaat?sectie=${section + 1}`)
-        return
-      }
-      const next = makeCard(updated, section, card.kind === 'word' ? card.id : undefined)
-      show(next, section)
+      if (next) show(next, section)
+      else window.location.assign(`/resultaat?sectie=${section + 1}`)
     }, 2000)
   }
 
