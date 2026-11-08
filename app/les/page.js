@@ -539,13 +539,12 @@ export default function Home() {
               })}
             </div>
           </form>}
-          <div className="feedback" aria-live="polite">
-            {feedback && <p className={feedback.correct ? 'success' : 'retry'}>
-              {feedback.correct ? 'Helemaal goed!' : speech ? 'Bijna. Luister en probeer het later opnieuw.' : vocabulary ? 'Dit woord komt later terug.' : 'Bijna. Dit is een voorbeeldantwoord.'}
-              {speech ? !feedback.correct && <> <strong lang="sv">{card.swedish}</strong></> : <> <strong>{toSwedish ? card.swedish : vocabulary ? card.dutch : card.dutch[0]}</strong></>}
-            </p>}
-          </div>
           <div className="lesson-actions">
+            {feedback && <div className={`feedback ${feedback.correct ? 'success' : 'retry'}`} aria-live="polite" role="status">
+              <span>{feedback.correct ? 'Helemaal goed!' : 'Juiste antwoord'}</span>
+              <strong lang={toSwedish || speech ? 'sv' : 'nl'}>{toSwedish || speech ? card.swedish : vocabulary ? card.dutch : card.dutch[0]}</strong>
+              {!feedback.correct && <small>{speech ? 'Luister en probeer het later opnieuw.' : 'Deze oefening komt later terug.'}</small>}
+            </div>}
             <button className="check" type="submit" form={speech || vocabulary ? undefined : 'translation-form'}
               disabled={!!feedback || transcribing || (vocabulary ? true : speech ? !audioUrl || recording : !selectedTiles.length)}
               onClick={speech ? submitSpeech : undefined}>{transcribing ? 'Luisteren…' : 'Controleer'}</button>
